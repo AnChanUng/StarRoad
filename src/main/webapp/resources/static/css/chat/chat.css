@@ -82,6 +82,12 @@ sup.cite {
     border-radius: 8px;
 }
 
+/* 가드레일(입력·출력 검사)에 걸려 차단된 경우 */
+.nogrounds.blocked {
+    color: #8a4b00;
+    background: #fff4e0;
+}
+
 /* 검색은 됐지만 인용번호를 하나도 달지 않은 경우 */
 .warn {
     margin-top: 10px;

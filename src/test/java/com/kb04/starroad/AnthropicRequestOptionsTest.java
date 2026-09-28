@@ -82,7 +82,9 @@ class AnthropicRequestOptionsTest {
 
     @Test
     void sendsNoSamplingParameters() {
-        chatClient.prompt().user("테스트").call().content();
+        // ChatClient 에는 L1 검색 게이트(RagRetrievalAdvisor)가 붙어 있다. 무관한 문장을 보내면
+        // LLM 까지 가지 않으므로, dev 샘플 데이터에 답이 있는 질문을 보내 실제 요청 경로를 탄다.
+        chatClient.prompt().user("KB청년희망적금 최고 금리가 몇 퍼센트야?").call().content();
 
         String body = CAPTURED_BODY.get();
         assertNotNull(body, "스텁 서버가 요청을 받지 못했다");

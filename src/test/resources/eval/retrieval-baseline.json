@@ -1,0 +1,10 @@
+{
+  "topK" : 4,
+  "threshold" : 0.83,
+  "hitRate" : 1.0,
+  "rejectRate" : 1.0,
+  "mrr" : 1.0,
+  "minRelevantScore" : 0.8727,
+  "maxIrrelevantScore" : 0.8242,
+  "passed" : [ "A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10", "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19", "O01", "O02", "O03", "O04", "O05", "O06" ]
+}

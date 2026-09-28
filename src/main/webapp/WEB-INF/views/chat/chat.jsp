@@ -90,7 +90,9 @@
     function appendBot(data) {
         let html = '<div class="msg bot"><div class="bubble">';
 
-        if (!data.grounded) {
+        if (data.blocked) {
+            html += '<div class="nogrounds blocked"><i class="fa-solid fa-shield-halved"></i> 안전 정책에 따라 처리하지 않은 요청입니다</div>';
+        } else if (!data.grounded) {
             html += '<div class="nogrounds"><i class="fa-solid fa-circle-info"></i> 근거 자료를 찾지 못했습니다</div>';
         }
         html += renderAnswer(data.answer);

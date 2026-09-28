@@ -42,6 +42,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 챗봇 요청 수·가드레일 차단 수·토큰 사용량을 /actuator/metrics 로 노출한다 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
 
         <!-- JSP + JSTL (Jakarta EE 10) -->
         <dependency>
@@ -133,6 +138,21 @@
 
     <build>
         <plugins>
+            <!-- JDK 23+ 는 클래스패스의 애너테이션 프로세서를 자동 실행하지 않는다.
+                 Lombok 을 명시해야 JDK 21·25 어느 쪽에서도 똑같이 빌드된다. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

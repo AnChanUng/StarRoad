@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code eval/answer-baseline.json} 이 있으면, 그때 통과하던 문항이 지금 실패하는지 보고한다.
  * LLM 출력은 매번 조금씩 달라서 기본값은 경고만 하고, {@code -Deval.strict=true} 면 실패 처리한다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.ai.vectorstore.chroma.collection-name=starroad-test-klue-v1")
 @ActiveProfiles(resolver = RagAnswerEvalTest.EvalProfiles.class)
 @EnabledIfSystemProperty(named = "eval.llm", matches = "true")
 class RagAnswerEvalTest {

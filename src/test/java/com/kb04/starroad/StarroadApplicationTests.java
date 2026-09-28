@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
  * DB 가 떠 있지 않은 환경에서는 컨텍스트 로딩이 실패한다. dev 프로필의 인메모리 H2 를
  * 쓰면 외부 의존 없이 검증할 수 있다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.ai.vectorstore.chroma.collection-name=starroad-test-klue-v1")
 @ActiveProfiles("dev")
 class StarroadApplicationTests {
 

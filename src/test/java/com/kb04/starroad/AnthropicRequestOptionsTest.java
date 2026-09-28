@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 실제 API 는 인증(401)을 본문 검증보다 먼저 하기 때문에, 키가 없으면 이 문제를
  * 잡아낼 수 없다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.ai.vectorstore.chroma.collection-name=starroad-test-klue-v1")
 @ActiveProfiles("dev")
 class AnthropicRequestOptionsTest {
 

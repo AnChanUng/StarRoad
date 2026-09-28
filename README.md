@@ -33,99 +33,16 @@
 관심 정책의 마감 날짜가 임박 시 홈 화면에서 알림을 제공합니다.
 
 ### 🍿 AI 정책 상담 챗봇 (RAG)
-등록된 청년정책·예적금 상품 데이터에서 근거를 찾아 답변하는 챗봇입니다.
+Spring AI가 질문과 DB의 정책·상품 설명을 로컬 KLUE-BERT 계열 인코더로 벡터화하고 ChromaDB에서 근거를 검색합니다. 답변 생성은 별도의 LLM이 담당합니다. 근거가 없으면 생성 호출을 건너뛰며, 답변에는 인용과 색인 당시의 수치가 담긴 출처 카드를 붙입니다.
 
-일반적인 챗봇은 모르는 것을 그럴듯하게 지어냅니다. 금융 정책은 숫자 하나가 틀리면 
-사용자가 실제로 손해를 보기 때문에, 환각상태를 방지하는 RAG기반 ChatBot을 개발했습니다.
+개발 환경에서는 먼저 `docker compose up -d --build`로 ChromaDB와 인코더를 시작합니다.
+그다음 Ollama가 실행 중인 환경에서 다음을 실행합니다.
 
-<br/>
-
-## 🐳 환각(Hallucination)을 막는 4단계
-
-| | 방어 | 동작 |
-|---|---|---|
-| **L1** | 검색 게이트 | 유사도가 기준(0.85) 미만이면 **LLM을 호출조차 하지 않고** 답변을 거부합니다. 묻지 않으면 지어낼 기회가 없습니다. |
-| **L2** | 컨텍스트 한정 | 검색된 자료 밖의 지식 사용을 프롬프트로 금지합니다. |
-| **L3** | 인용 검증 | 답변의 `[n]` 인용번호를 파싱해 실제 DB 레코드와 연결합니다. 범위를 벗어난 번호는 버리고, 하나도 인용하지 않으면 화면에 경고를 띄웁니다. |
-| **L4** | 숫자 비위임 | 금리·기간은 DB 원본값을 출처 카드에 그대로 실어, LLM이 쓴 숫자와 화면에서 대조되게 합니다. |
-
-L1의 임계값 0.85는 짐작이 아니라 실측값입니다. `RagRetrievalEvalTest`가 평가셋으로 
-top-k 4종 × 임계값 8종을 모두 비교합니다. 정답 자료의 최저점은 0.8727, 무관한 질문의 최고점은 
-0.8242("오늘 서울 날씨 어때?")였습니다. 처음 쓰던 0.83은 날씨 질문과 0.006 차이밖에 나지 않아, 
-두 값의 중간인 0.85로 올렸습니다. 수정 전후 기록은 [포트폴리오 정리](docs/PORTFOLIO.md#6-수정-전후-기록)에 있습니다.
-
-**실측 동작**
-
-| 질문 | 결과 |
-|---|---|
-| "서울 사는 청년인데 월세 지원 받을 수 있는 정책 있어?" | 13.2초 · 근거 자료의 조건을 정확히 인용해 답변 |
-| "KB청년희망적금 최고 금리가 몇 퍼센트야?" | 연 5.00% / 최소 10,000원 — DB 원본과 일치 |
-| "부산시 월세 지원 정책 조건이 어떻게 돼?" | 자료에 없다고 답하고 **지어내지 않음** (L1 통과 → L2가 차단) |
-| "오늘 서울 날씨 어때?" | **0.069초** — L1에서 차단, LLM 미호출 |
-
-<br/>
-
-## 🐳 가드레일과 관측성
-
-입력·출력 검사를 Spring AI Advisor(`GuardrailAdvisor`) 한곳에 모았습니다.
-
-| 단계 | 막는 것 | 결과 |
-|---|---|---|
-| 입력 | 프롬프트 주입 금지 문구, 주민번호·휴대폰·카드번호, 500자 초과 | 검색도 LLM 호출도 하지 않고 차단 |
-| 출력 | 답변 속 개인정보, 시스템 프롬프트 문구 유출 | 안내 문구로 교체 |
-
-전체 요청 수와 차단 횟수는 Spring Boot Actuator로 확인합니다.
-
-```bash
-curl localhost:8080/actuator/metrics/starroad.chat.requests      # outcome 별 요청 수
-curl localhost:8080/actuator/metrics/starroad.guardrail.blocked  # stage·rule 별 차단 수
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,ollama"
 ```
 
-Postman 컬렉션(`docs/postman/`)으로 정상 요청과 차단할 요청을 보내 볼 수 있습니다. 
-문자열 규칙이라 말 바꾸기나 다른 언어 같은 우회는 막지 못합니다. 이 한계는 테스트와 문서에 정리해 두었습니다.
-
-<br/>
-
-## 🐳 품질 평가
-
-| 테스트 | 무엇을 보나 | LLM |
-|---|---|---|
-| `GuardrailRulesTest`, `ChatPipelineTest` | 차단 규칙, 차단 시 LLM 미호출, 지표 기록 | 불필요 |
-| `RagRetrievalEvalTest` | 평가셋 33문항으로 hit@k·거부율 측정, 설정 조합 비교, 기준선 대비 회귀 확인 | 불필요 |
-| `RagAnswerEvalTest` | 인용·핵심 숫자 규칙 검사 + LLM 평가자 + 사람 검토용 리포트 | 필요 |
-
-```bash
-mvnw test                                                                    # LLM 없이 도는 테스트 전부
-mvnw test -Dtest=RagAnswerEvalTest -Deval.llm=true -Deval.profiles=dev,ollama # 답변 평가
-```
-
-설계 선택의 이유와 수정 전후 기록은 [docs/PORTFOLIO.md](docs/PORTFOLIO.md)에 정리했습니다.
-
-<br/>
-
-## 🐳 챗봇 실행 방법
-
-Oracle 없이 인메모리 H2와 샘플 데이터로 바로 띄울 수 있습니다.
-
-```bash
-# 1) 로컬 LLM — API 키 불필요, 인터넷 없이 동작
-#    https://ollama.com/download 설치만 하면 모델(기본값 exaone3.5:2.4b)은 기동 시 자동으로 받습니다
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ollama
-
-# 2) Google Gemini — AI Studio 무료 키 (결제수단 등록 없음)
-set GEMINI_API_KEY=...
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev,gemini
-
-# 3) Anthropic Claude
-set ANTHROPIC_API_KEY=...
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-생성 모델은 `spring.ai.model.chat` 하나로 갈아끼웁니다. **임베딩은 어느 쪽이든 JVM 내장 
-ONNX(multilingual-e5-small)를 쓰므로 외부 API를 타지 않습니다.** 따라서 `ollama` 프로필은 
-검색·생성 양쪽 모두 로컬에서 돌아 외부 의존이 0입니다.
-
-<br/>
+[모델·설계·실행 방법과 실제 평가 결과](docs/PORTFOLIO.md) · [검색 평가셋](src/test/resources/eval/rag-eval-set.json)
 
 ## 🐳 시연 영상 
 **회원 가입**

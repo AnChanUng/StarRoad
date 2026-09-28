@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code target/rag-eval/retrieval-result.json} 을 {@code src/test/resources/eval/retrieval-baseline.json}
  * 으로 복사해 기준선을 올린다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.ai.vectorstore.chroma.collection-name=starroad-test-klue-v1")
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RagRetrievalEvalTest {

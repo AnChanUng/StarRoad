@@ -7,13 +7,13 @@ import com.kb04.starroad.Repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
+import java.util.UUID;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,19 +24,13 @@ import java.util.Map;
  * DB 의 정책·상품 데이터를 벡터 색인으로 만드는 서비스.
  *
  * <p>RAG 의 'R'(검색)이 성립하려면 먼저 각 row 를 임베딩해 두어야 한다.
- * 색인은 애플리케이션 기동 시 1회 수행하고 파일로 저장해, 재기동 때는
- * 다시 임베딩하지 않고 불러온다.
+ * 색인은 DB 원본으로 동기화하고 ChromaDB 에 보관한다.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RagIndexService {
 
-    /**
-     * multilingual-e5 계열 모델은 학습 시 문서에 "passage: ", 질의에 "query: " 접두사를
-     * 붙였다. 동일하게 맞춰야 검색 품질이 나온다.
-     */
-    public static final String PASSAGE_PREFIX = "passage: ";
 
     public static final String META_TYPE = "type";
     public static final String META_NO = "no";
@@ -47,35 +41,13 @@ public class RagIndexService {
     public static final String TYPE_POLICY = "policy";
     public static final String TYPE_PRODUCT = "product";
 
-    private final SimpleVectorStore vectorStore;
+    private final VectorStore vectorStore;
     private final PolicyRepository policyRepository;
     private final ProductRepository productRepository;
 
-    @Value("${starroad.rag.index-file:./rag-index.json}")
-    private String indexFilePath;
-
-    /**
-     * true 면 저장된 색인을 무시하고 매 기동마다 DB 에서 새로 만든다.
-     * 데이터가 매번 바뀌는 인메모리 DB(dev 프로필)에서 켠다.
-     */
-    @Value("${starroad.rag.always-reindex:false}")
-    private boolean alwaysReindex;
-
     @EventListener(ApplicationReadyEvent.class)
     public void initIndex() {
-        File indexFile = new File(indexFilePath);
-        try {
-            if (indexFile.exists() && !alwaysReindex) {
-                vectorStore.load(indexFile);
-                log.info("[RAG] 기존 색인을 불러왔다: {}", indexFile.getAbsolutePath());
-            } else {
-                reindex();
-            }
-        } catch (Exception e) {
-            // DB 가 떠 있지 않거나 임베딩 모델 다운로드에 실패해도 앱 자체는 기동시킨다.
-            // 이 경우 챗봇만 "자료 없음"으로 동작한다.
-            log.warn("[RAG] 색인 초기화 실패 — 챗봇이 답변할 자료가 없는 상태다. 원인: {}", e.toString());
-        }
+        reindex();
     }
 
     /**
@@ -83,7 +55,7 @@ public class RagIndexService {
      *
      * @return 색인된 문서 수
      */
-    public int reindex() {
+    public synchronized int reindex() {
         List<Document> documents = new ArrayList<>();
 
         for (Policy policy : policyRepository.findAll()) {
@@ -93,17 +65,14 @@ public class RagIndexService {
             documents.add(toDocument(product));
         }
 
-        if (documents.isEmpty()) {
-            log.warn("[RAG] 색인할 정책·상품 데이터가 DB 에 없다.");
-            return 0;
+        // Only sweep after all current records have been upserted successfully.
+        String batch = UUID.randomUUID().toString();
+        documents.forEach(d -> d.getMetadata().put("index_batch", batch));
+        for (int i = 0; i < documents.size(); i += 32) {
+            vectorStore.add(documents.subList(i, Math.min(i + 32, documents.size())));
         }
-
-        vectorStore.add(documents);
-
-        File indexFile = new File(indexFilePath);
-        vectorStore.save(indexFile);
-        log.info("[RAG] 문서 {}건 색인 완료 → {}", documents.size(), indexFile.getAbsolutePath());
-
+        vectorStore.delete(new FilterExpressionBuilder().ne("index_batch", batch).build());
+        log.info("[RAG] ChromaDB 동기화 완료: {}건", documents.size());
         return documents.size();
     }
 
@@ -125,12 +94,12 @@ public class RagIndexService {
         metadata.put(META_TYPE, TYPE_POLICY);
         metadata.put(META_NO, policy.getNo());
         metadata.put(META_NAME, policy.getName());
-        metadata.put(META_LINK, policy.getLink());
+        if (policy.getLink() != null) metadata.put(META_LINK, policy.getLink());
         metadata.put(META_FACT, fact);
 
         return Document.builder()
                 .id(TYPE_POLICY + "-" + policy.getNo())
-                .text(PASSAGE_PREFIX + text)
+                .text(text)
                 .metadata(metadata)
                 .build();
     }
@@ -157,12 +126,12 @@ public class RagIndexService {
         metadata.put(META_TYPE, TYPE_PRODUCT);
         metadata.put(META_NO, product.getNo());
         metadata.put(META_NAME, product.getName());
-        metadata.put(META_LINK, product.getLink());
+        if (product.getLink() != null) metadata.put(META_LINK, product.getLink());
         metadata.put(META_FACT, fact.toString());
 
         return Document.builder()
                 .id(TYPE_PRODUCT + "-" + product.getNo())
-                .text(PASSAGE_PREFIX + text)
+                .text(text)
                 .metadata(metadata)
                 .build();
     }

@@ -49,7 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RagRetrievalEvalTest {
 
     private static final int[] TOP_KS = {1, 2, 4, 6};
-    private static final double[] THRESHOLDS = {0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87};
+    private static final double[] THRESHOLDS = {0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.60};
 
     @Autowired
     private RagRetrievalAdvisor retrieval;
@@ -222,7 +222,7 @@ class RagRetrievalEvalTest {
         return m;
     }
 
-    /** 운영과 같은 조건(상위 k개 + 임계값 이상)으로 자른다. SimpleVectorStore 결과는 점수 내림차순이다. */
+    /** 운영과 같은 조건(상위 k개 + 임계값 이상)으로 자른다. ChromaDB 결과는 점수 내림차순이다. */
     private static List<Document> cut(List<Document> raw, int k, double threshold) {
         return raw.stream().filter(d -> score(d) >= threshold).limit(k).toList();
     }

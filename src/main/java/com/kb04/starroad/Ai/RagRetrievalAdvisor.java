@@ -1,6 +1,5 @@
 package com.kb04.starroad.Ai;
 
-import com.kb04.starroad.Service.RagIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -26,8 +25,8 @@ import java.util.Map;
  * <p>검색된 문서는 응답 컨텍스트의 {@link #DOCUMENTS} 에 담는다. ChatService 는 이것으로
  * 인용 번호를 검증하고(L3) DB 원본 수치를 출처 카드에 싣는다(L4).
  *
- * <p>{@link VectorStore} 인터페이스에만 의존하므로 SimpleVectorStore 를 PGVector 등으로
- * 바꿔도 이 클래스는 그대로다.
+ * <p>{@link VectorStore} 인터페이스에만 의존하므로 ChromaDB 검색 구현을 교체해도
+ * 이 클래스는 그대로다.
  */
 @Slf4j
 @Component
@@ -36,8 +35,6 @@ public class RagRetrievalAdvisor implements CallAdvisor {
     /** 응답 컨텍스트 키. 값은 {@code List<Document>} (없으면 빈 리스트) */
     public static final String DOCUMENTS = "starroad.rag.documents";
 
-    /** multilingual-e5 는 질의에 "query: " 접두사를 붙여야 검색 품질이 나온다. */
-    public static final String QUERY_PREFIX = "query: ";
 
     public static final String NOT_FOUND_MESSAGE =
             "제가 가진 청년정책·예적금 상품 자료로는 답변드릴 수 없습니다. "
@@ -49,14 +46,8 @@ public class RagRetrievalAdvisor implements CallAdvisor {
     @Value("${starroad.rag.top-k:4}")
     private int topK;
 
-    /**
-     * 코사인 유사도 하한. 이 값 미만이면 '관련 자료 없음'으로 처리한다.
-     *
-     * <p>multilingual-e5 는 무관한 문장끼리도 0.78 안팎이 나오는 특성이 있어
-     * 임계값을 낮게 잡으면 게이트가 그대로 무력해진다.
-     * {@code RagRetrievalCalibrationTest}·{@code RagRetrievalEvalTest} 실측으로 정했다.
-     */
-    @Value("${starroad.rag.similarity-threshold:0.85}")
+    /** ChromaDB score = 1 - distance. */
+    @Value("${starroad.rag.similarity-threshold:0.40}")
     private double similarityThreshold;
 
     public RagRetrievalAdvisor(VectorStore vectorStore) {
@@ -93,7 +84,7 @@ public class RagRetrievalAdvisor implements CallAdvisor {
 
     public List<Document> search(String question, int k, double threshold) {
         List<Document> found = vectorStore.similaritySearch(SearchRequest.builder()
-                .query(QUERY_PREFIX + question)
+                .query(question)
                 .topK(k)
                 .similarityThreshold(threshold)
                 .build());
@@ -105,20 +96,11 @@ public class RagRetrievalAdvisor implements CallAdvisor {
         sb.append("<자료>\n");
         for (int i = 0; i < documents.size(); i++) {
             sb.append("[").append(i + 1).append("] ");
-            sb.append(stripPassagePrefix(documents.get(i).getText())).append("\n\n");
+            sb.append(documents.get(i).getText()).append("\n\n");
         }
         sb.append("</자료>\n\n");
         sb.append("질문: ").append(question);
         return sb.toString();
-    }
-
-    private static String stripPassagePrefix(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.startsWith(RagIndexService.PASSAGE_PREFIX)
-                ? text.substring(RagIndexService.PASSAGE_PREFIX.length())
-                : text;
     }
 
     public int getTopK() {

@@ -85,15 +85,15 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-google-genai</artifactId>
         </dependency>
-        <!-- Spring AI: 임베딩은 JVM 내장 ONNX(외부 서버·API 키 불필요) -->
+        <!-- Spring AI: 로컬 KLUE-BERT 임베딩 API 클라이언트 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-model-transformers</artifactId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
-        <!-- SimpleVectorStore / SearchRequest. 모델 스타터에 전이되지 않아 직접 선언한다 -->
+        <!-- ChromaDB 영속 벡터 저장소 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-vector-store</artifactId>
+            <artifactId>spring-ai-starter-vector-store-chroma</artifactId>
         </dependency>
 
         <dependency>

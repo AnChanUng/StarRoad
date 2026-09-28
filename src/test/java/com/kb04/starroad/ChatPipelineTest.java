@@ -209,8 +209,7 @@ class ChatPipelineTest {
     private static Document rentPolicy() {
         return Document.builder()
                 .id("policy-1")
-                .text(RagIndexService.PASSAGE_PREFIX
-                        + "정책명: 청년 월세 한시 특별지원\n지역: 서울\n내용: 월 최대 20만원을 최장 12개월간 지원한다.")
+                .text("정책명: 청년 월세 한시 특별지원\n지역: 서울\n내용: 월 최대 20만원을 최장 12개월간 지원한다.")
                 .metadata(Map.of(
                         RagIndexService.META_TYPE, RagIndexService.TYPE_POLICY,
                         RagIndexService.META_NO, 1,

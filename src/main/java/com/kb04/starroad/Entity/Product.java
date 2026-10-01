@@ -92,6 +92,7 @@ public class Product {
                 .explain(explain)
                 .maxRate(maxRate)
                 .maxRatePeriod(maxRatePeriod)
+                .maxConditionRate(maxConditionRate)
                 .maxPeriod(maxPeriod)
                 .link(link)
                 .build();

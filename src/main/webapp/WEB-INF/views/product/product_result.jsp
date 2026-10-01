@@ -146,37 +146,21 @@
                 </div>
                 <c:if test="${user ne null}">
                     <div id="member" class="content">
-                        현재 ${user}님의 자산으로 계산된<br>
-                        만기 예상 금액은<br>
                         <c:choose>
-                            <c:when test="${memberConditionRates.containsKey(item.no)}">
-                                <c:choose>
-                                    <c:when test="${item.baseRate ne null}">
-                                        세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                                   value="${((monthlyAvailablePrice * 1000 * Math.max(item.maxPeriod, period)) * (1 + (((item.baseRate + memberConditionRates.get(item.no))*(item.maxRatePeriod + 1) / 24) * (1 - rate_value)) / 100))}"/></span>원
-
-                                    </c:when>
-                                    <c:otherwise>
-                                        세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                                   value="${((monthlyAvailablePrice * 1000 * item.maxPeriod) * (1 + (((item.maxRate - item.maxConditionRate + memberConditionRates.get(item.no))*(item.maxRatePeriod + 1) / 24) * (1 - rate_value)) / 100))}"/></span>원
-                                    </c:otherwise>
-                                </c:choose>
+                            <%-- 계산은 MaturityCalculator 가 한다. 고른 기간·과세 구분과 회원이 충족한 우대금리가 반영된 금액이다. --%>
+                            <c:when test="${item.estimate ne null}">
+                                현재 ${user}님의 자산으로 계산된<br>
+                                만기 예상 금액은<br>
+                                ${rate eq 'none' ? '비과세' : '세후'} <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
+                                                           value="${item.estimate.total}"/></span>원
+                                입니다.<br>
+                                (${item.estimate.months}개월 · 연 ${item.estimate.appliedRate}% 적용)
                             </c:when>
                             <c:otherwise>
-                                <c:choose>
-                                    <c:when test="${item.baseRate ne null}">
-                                        세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                                   value="${((monthlyAvailablePrice * 1000 * Math.max(item.maxPeriod, period)) * (1 + (((item.baseRate + memberConditionRates.get(item.no))*(item.maxRatePeriod + 1) / 24) * (1 - rate_value)) / 100))}"/></span>원
-
-                                    </c:when>
-                                    <c:otherwise>
-                                        세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                                   value="${((monthlyAvailablePrice * 1000 * item.maxPeriod) * (1 + (((item.maxRate - item.maxConditionRate + memberConditionRates.get(item.no))*(item.maxRatePeriod + 1) / 24) * (1 - rate_value)) / 100))}"/></span>원
-                                    </c:otherwise>
-                                </c:choose>
+                                이미 저축 목표만큼 납입하고 있어<br>
+                                만기 예상 금액을 계산하지 않았습니다.
                             </c:otherwise>
                         </c:choose>
-                        입니다.
                     </div>
                 </c:if>
                 <div class="content">

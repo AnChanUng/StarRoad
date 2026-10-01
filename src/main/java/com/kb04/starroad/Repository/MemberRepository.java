@@ -16,11 +16,15 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     Member findByNo(int no);
 
-    @Query(value = "SELECT SUM(PRICE) FROM PRODUCT INNER JOIN SUBSCRIPTION ON PRODUCT.NO = SUBSCRIPTION.PROD_NO INNER JOIN PAYMENT_LOG ON SUBSCRIPTION.NO = PAYMENT_LOG.SUBSCRIPTION_NO WHERE MEMBER_NO = :no AND PRODUCT.TYPE='S'", nativeQuery = true)
-    Integer getSavings(@Param("no") int no);
+    /** 회원이 적금에 납입한 금액 합계. 납입 내역이 없으면 null */
+    @Query("SELECT SUM(s.price) FROM PaymentLog p JOIN p.subscription s JOIN s.prod pr "
+            + "WHERE s.member.no = :no AND pr.type = 'S'")
+    Long getSavings(@Param("no") int no);
 
-    @Query(value = "SELECT SUM(PRICE) FROM PRODUCT INNER JOIN SUBSCRIPTION ON PRODUCT.NO = SUBSCRIPTION.PROD_NO INNER JOIN PAYMENT_LOG ON SUBSCRIPTION.NO = PAYMENT_LOG.SUBSCRIPTION_NO WHERE MEMBER_NO = :no AND PRODUCT.TYPE='D'", nativeQuery = true)
-    Integer getDeposit(@Param("no") int no);
+    /** 회원이 예금에 납입한 금액 합계. 납입 내역이 없으면 null */
+    @Query("SELECT SUM(s.price) FROM PaymentLog p JOIN p.subscription s JOIN s.prod pr "
+            + "WHERE s.member.no = :no AND pr.type = 'D'")
+    Long getDeposit(@Param("no") int no);
 
     Optional<Member> findById(String id);
 

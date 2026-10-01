@@ -11,8 +11,9 @@ import java.util.List;
 
 public class ProductSpecification {
 
+    // escape 문자를 명시한다. 생략하면 Hibernate 가 escape '' 를 붙이는데, H2(Oracle 모드)는 이를 NULL 로 봐서 아무것도 찾지 못한다
     public static Specification<Product> containsName(String name) {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("name"),"%" + name + "%");
+        return (root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("name"),"%" + name + "%", '\\');
     }
     public static Specification<Product> lessThanOrEqualToMinPeriod(int period) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.lessThanOrEqualTo(root.get("minPeriod"), period);

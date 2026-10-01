@@ -1,8 +1,5 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.SubProdDto;
-import com.kb04.starroad.Dto.product.ProductDto;
-import com.kb04.starroad.Dto.product.ProductResponseDto;
 import lombok.*;
 import org.hibernate.annotations.Formula;
 import org.springframework.lang.Nullable;
@@ -11,10 +8,10 @@ import jakarta.persistence.*;
 
 @Getter
 @Entity
-@Builder
+@Builder(access = AccessLevel.PRIVATE)
 @Table(name = "product")
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @SequenceGenerator(name = "product_seq", sequenceName = "product_seq", allocationSize = 50, initialValue = 1)
 public class Product {
 
@@ -65,35 +62,33 @@ public class Product {
     @Formula("(max_period * 1000) * (1 + ((max_rate - nvl(max_condition_rate, 0)) * (nvl(max_rate_period, max_period) + 1) / 24) * (1 - 0.154) / 100) ")
     private Double maxRateTimesPeriod;
 
-    public ProductDto toProductDto() {
-        return ProductDto.builder()
-                .no(no)
+    /**
+     * 예적금 상품 한 건.
+     *
+     * @param type             'S' = 적금, 'D' = 예금
+     * @param minPeriod        최소 가입 기간(개월)
+     * @param maxPeriod        최장 가입 기간(개월)
+     * @param maxPrice         최대 납입액. 한도가 없으면 null
+     * @param maxRate          최고 연 이율(%). 우대금리를 모두 받았을 때의 값
+     * @param maxRatePeriod    최고 금리가 적용되는 기간(개월). 따로 없으면 null
+     * @param maxConditionRate 최고 금리 중 우대금리가 차지하는 몫(%p). 우대 조건이 없으면 null
+     */
+    public static Product of(Character type, String name, String attribute, String explain,
+                             int minPeriod, int maxPeriod, int minPrice, Integer maxPrice,
+                             Double maxRate, Integer maxRatePeriod, Double maxConditionRate,
+                             String link) {
+        return Product.builder()
                 .type(type)
                 .name(name)
-                .explain(explain)
                 .attribute(attribute)
+                .explain(explain)
                 .minPeriod(minPeriod)
                 .maxPeriod(maxPeriod)
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
-                .link(link)
                 .maxRate(maxRate)
                 .maxRatePeriod(maxRatePeriod)
                 .maxConditionRate(maxConditionRate)
-                .build();
-    }
-
-    public ProductResponseDto toProductResponseDto() {
-        return ProductResponseDto.builder()
-                .no(no)
-                .type(type)
-                .attribute(attribute)
-                .name(name)
-                .explain(explain)
-                .maxRate(maxRate)
-                .maxRatePeriod(maxRatePeriod)
-                .maxConditionRate(maxConditionRate)
-                .maxPeriod(maxPeriod)
                 .link(link)
                 .build();
     }

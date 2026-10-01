@@ -1,14 +1,25 @@
 package com.kb04.starroad.Config;
 
+import com.kb04.starroad.Entity.BaseRate;
+import com.kb04.starroad.Entity.Board;
+import com.kb04.starroad.Entity.Member;
+import com.kb04.starroad.Entity.PaymentLog;
 import com.kb04.starroad.Entity.Policy;
 import com.kb04.starroad.Entity.Product;
+import com.kb04.starroad.Entity.Subscription;
+import com.kb04.starroad.Repository.BaseRateRepository;
+import com.kb04.starroad.Repository.BoardRepository;
+import com.kb04.starroad.Repository.MemberRepository;
+import com.kb04.starroad.Repository.PaymentLogRepository;
 import com.kb04.starroad.Repository.PolicyRepository;
 import com.kb04.starroad.Repository.ProductRepository;
+import com.kb04.starroad.Repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -19,6 +30,7 @@ import java.util.List;
  * dev 프로필 전용 샘플 데이터.
  *
  * <p>인메모리 DB 는 기동할 때마다 비어 있으므로 정책·상품을 다시 넣는다.
+ * 로그인해야 볼 수 있는 화면(마이페이지, 만기 예상 금액)을 확인할 수 있게 체험용 회원도 한 명 넣는다.
  * {@code CommandLineRunner} 는 {@code ApplicationReadyEvent} 보다 먼저 실행되므로,
  * {@link com.kb04.starroad.Service.RagIndexService} 가 색인을 만들 시점에는
  * 이 데이터가 이미 DB 에 들어가 있다.
@@ -31,8 +43,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DevDataSeeder implements CommandLineRunner {
 
+    /** 체험용 회원 계정. dev 프로필에서만 만들어진다. */
+    static final String DEMO_ID = "starroad1";
+    static final String DEMO_PASSWORD = "starroad1234";
+
     private final PolicyRepository policyRepository;
     private final ProductRepository productRepository;
+    private final BaseRateRepository baseRateRepository;
+    private final MemberRepository memberRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PaymentLogRepository paymentLogRepository;
+    private final BoardRepository boardRepository;
 
     @Override
     public void run(String... args) {
@@ -77,7 +98,7 @@ public class DevDataSeeder implements CommandLineRunner {
                         "https://www.work.go.kr/kua", 60)
         ));
 
-        productRepository.saveAll(List.of(
+        List<Product> products = productRepository.saveAll(List.of(
                 // type: 'S' = 적금, 'D' = 예금
                 product('S', "KB청년희망적금", "청년우대",
                         "만 19~34세 청년을 위한 우대금리 적금이다. 급여이체와 자동이체를 등록하면 "
@@ -104,40 +125,63 @@ public class DevDataSeeder implements CommandLineRunner {
                         "https://obank.kbstar.com/product/first-finance-deposit")
         ));
 
-        log.info("[dev] 샘플 데이터 적재 완료 — 정책 {}건, 상품 {}건",
-                policyRepository.count(), productRepository.count());
+        seedDemoMember(products.get(0), products.get(1));
+
+        log.info("[dev] 샘플 데이터 적재 완료 — 정책 {}건, 상품 {}건, 체험용 계정 {} / {}",
+                policyRepository.count(), productRepository.count(), DEMO_ID, DEMO_PASSWORD);
+    }
+
+    /**
+     * 체험용 회원과 그 회원의 적금 가입·납입 기록, 게시글.
+     *
+     * @param finished 12개월을 모두 납입해 리워드를 받을 수 있는 적금
+     * @param ongoing  3개월째 납입 중인 적금
+     */
+    private void seedDemoMember(Product finished, Product ongoing) {
+        Member member = memberRepository.save(Member.join("김별길", DEMO_ID,
+                new BCryptPasswordEncoder().encode(DEMO_PASSWORD), "1999-03-01", "010-1234-5678",
+                "starroad1@example.com", "서울 영등포구 국제금융로8길 26,101동 1001호",
+                "직장인", "저축 및 투자", "근로 및 연금소득", 3000, 30));
+
+        // 가입 기간별 기본 금리 — 상품 검색에서 기간을 고르면 이 금리로 만기 예상 금액을 계산한다
+        baseRateRepository.saveAll(List.of(
+                BaseRate.of(finished, 12, 23, 3.20),
+                BaseRate.of(finished, 24, 36, 3.80),
+                BaseRate.of(ongoing, 24, 35, 3.30),
+                BaseRate.of(ongoing, 36, 60, 3.70)));
+
+        Subscription finishedSub = subscriptionRepository.save(Subscription.subscribe(member, finished, 12, 200));
+        for (int month = 12; month >= 1; month--) {
+            paymentLogRepository.save(PaymentLog.of(finishedSub, monthsAgo(month)));
+        }
+        Subscription ongoingSub = subscriptionRepository.save(Subscription.subscribe(member, ongoing, 24, 100));
+        for (int month = 2; month >= 0; month--) {
+            paymentLogRepository.save(PaymentLog.of(ongoingSub, monthsAgo(month)));
+        }
+
+        boardRepository.saveAll(List.of(
+                Board.write(member, "F", "정보공유", "청년도약계좌 가입 후기",
+                        "매달 70만원씩 넣고 있는데 정부 기여금이 생각보다 쏠쏠하네요.", null),
+                Board.write(member, "C", "챌린지", "적금 12개월 완주했습니다",
+                        "한 번도 안 빼먹고 넣었어요. 다음은 24개월 도전합니다!", null)));
     }
 
     private Policy policy(String name, String location, String tag, String explain,
                           String link, int endInDays) {
-        return Policy.builder()
-                .name(name)
-                .location(location)
-                .tag(tag)
-                .explain(explain)
-                .link(link)
-                .endDate(daysFromNow(endInDays))
-                .build();
+        return Policy.of(name, location, tag, explain, link, daysFromNow(endInDays));
     }
 
     private Product product(char type, String name, String attribute, String explain,
                             int minPeriod, int maxPeriod, int minPrice, Integer maxPrice,
                             double maxRate, Integer maxRatePeriod, Double maxConditionRate,
                             String link) {
-        return Product.builder()
-                .type(type)
-                .name(name)
-                .attribute(attribute)
-                .explain(explain)
-                .minPeriod(minPeriod)
-                .maxPeriod(maxPeriod)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
-                .maxRate(maxRate)
-                .maxRatePeriod(maxRatePeriod)
-                .maxConditionRate(maxConditionRate)
-                .link(link)
-                .build();
+        return Product.of(type, name, attribute, explain, minPeriod, maxPeriod, minPrice, maxPrice,
+                maxRate, maxRatePeriod, maxConditionRate, link);
+    }
+
+    private Date monthsAgo(int months) {
+        return Date.from(LocalDate.now().minusMonths(months)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     private Date daysFromNow(int days) {

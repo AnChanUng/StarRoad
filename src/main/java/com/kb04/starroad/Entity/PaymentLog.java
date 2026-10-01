@@ -1,6 +1,5 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.PaymentLogDto;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -8,9 +7,9 @@ import java.util.Date;
 
 @Entity
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @SequenceGenerator(name = "payment_log_seq", sequenceName="payment_log_seq")
 @Table(name = "payment_log")
 public class PaymentLog {
@@ -26,10 +25,10 @@ public class PaymentLog {
     @Column(nullable = false)
     private Date paymentDate;
 
-    public PaymentLogDto toPaymentLogDto() {
-        return PaymentLogDto.builder()
-                .no(no)
-                .subscription(subscription.toSubscriptionDto())
+    /** 가입한 상품에 paymentDate 에 납입한 기록 */
+    public static PaymentLog of(Subscription subscription, Date paymentDate) {
+        return PaymentLog.builder()
+                .subscription(subscription)
                 .paymentDate(paymentDate)
                 .build();
     }

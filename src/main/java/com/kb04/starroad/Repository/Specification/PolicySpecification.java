@@ -18,7 +18,8 @@ public class PolicySpecification {
                         predicates.add(criteriaBuilder.equal(root.get(key), String.valueOf(conditions.get(key))));
                         break;
                     case "keyword":
-                        predicates.add(criteriaBuilder.like(root.get("name"), '%' + String.valueOf(conditions.get(key)) + '%'));
+                        // escape 문자를 명시한다. 생략하면 H2(Oracle 모드)에서 escape '' 가 NULL 로 처리돼 검색 결과가 비게 된다
+                        predicates.add(criteriaBuilder.like(root.get("name"), '%' + String.valueOf(conditions.get(key)) + '%', '\\'));
                         break;
                     case "tag":
 

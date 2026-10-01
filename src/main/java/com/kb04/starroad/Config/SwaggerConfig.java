@@ -2,6 +2,7 @@ package com.kb04.starroad.Config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,6 +12,11 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class SwaggerConfig {
+
+    static {
+        // @LoginMember 파라미터는 세션에서 채우는 값이라 API 명세의 요청 파라미터에서 뺀다
+        SpringDocUtils.getConfig().addAnnotationsToIgnore(LoginMember.class);
+    }
 
     @Bean
     public OpenAPI starroadOpenAPI() {

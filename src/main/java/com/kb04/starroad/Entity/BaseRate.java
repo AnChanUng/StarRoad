@@ -1,15 +1,14 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.product.BaseRateDto;
 import lombok.*;
 
 import jakarta.persistence.*;
 
 @Getter
 @Entity
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "base_rate")
 @SequenceGenerator(name = "base_rate_seq", sequenceName = "base_rate_seq", allocationSize = 1)
 public class BaseRate {
@@ -31,13 +30,13 @@ public class BaseRate {
     @JoinColumn(name = "prod_no", nullable = false)
     private Product prod;
 
-    public BaseRateDto toBaseRateDto() {
-        return BaseRateDto.builder()
-                .no(no)
+    /** 상품의 가입 기간 구간(minPeriod ~ maxPeriod 개월)에 적용되는 기본 연 이율(%) */
+    public static BaseRate of(Product prod, int minPeriod, int maxPeriod, Double rate) {
+        return BaseRate.builder()
+                .prod(prod)
                 .minPeriod(minPeriod)
                 .maxPeriod(maxPeriod)
                 .rate(rate)
-                .prod(prod.toProductDto())
                 .build();
     }
 

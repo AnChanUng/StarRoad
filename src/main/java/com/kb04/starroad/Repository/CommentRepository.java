@@ -1,7 +1,5 @@
 package com.kb04.starroad.Repository;
 
-import com.kb04.starroad.Dto.MemberDto;
-import com.kb04.starroad.Dto.board.CommentDto;
 import com.kb04.starroad.Entity.Board;
 import com.kb04.starroad.Entity.Comment;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,11 +12,8 @@ import java.util.Optional;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Integer>, JpaSpecificationExecutor<Comment> {
 
-    List<CommentDto> findByBoardOrderByRegdate(Board board);
-    Optional<Comment> findByNo(Comment comment);
+    List<Comment> findByBoardOrderByRegdate(Board board);
     void deleteByNo(int commentNo);
-
-
 
     Optional<Comment> findByNo(int commentNo);
 

@@ -150,8 +150,11 @@ public ResponseEntity<MypageResponseDto> asset(@LoginMember MemberDto loginMembe
 ```
 
 - **로그인 회원** — `@LoginMember` 가 세션에서 꺼내 줍니다. 로그인하지 않았으면 401 로 응답합니다.
-- **실패 응답** — 서비스가 `StarroadException.notFound("...")` 처럼 던지면 `GlobalExceptionHandler` 가
-  상태 코드와 `{"message": "..."}` 로 바꿉니다. 컨트롤러는 성공 응답만 만듭니다.
+- **실패 응답** — 실패의 상태 코드와 안내 문구는 `ErrorCode` enum 한곳에 모여 있습니다. 서비스가
+  `throw new StarroadException(ErrorCode.BOARD_NOT_FOUND)` 로 던지면 `GlobalExceptionHandler` 가
+  `{"code": "BOARD_NOT_FOUND", "message": "게시글을 찾을 수 없습니다."}` 로 바꿉니다. 잘못된 요청 값, 없는 주소,
+  예상하지 못한 예외도 같은 핸들러가 같은 모양으로 응답하고, 스택 트레이스 같은 내부 정보는 로그에만 남깁니다.
+  컨트롤러는 성공 응답만 만듭니다.
 - **객체 생성** — 엔티티와 응답 DTO 는 생성자·빌더를 막고 이름 있는 정적 팩토리 메서드로만 만듭니다.
   `Board.write(작성자, ...)`, `Comment.write(게시글, 작성자, 내용)`, `Member.join(...)`, `Subscription.subscribe(...)`,
   `Heart.of(회원, 게시글)`, `BoardResponseDto.from(board)` — 호출하는 쪽만 봐도 무엇을 만드는지 알 수 있습니다.

@@ -8,6 +8,7 @@ import com.kb04.starroad.Dto.policy.PolicyRequestDto;
 import com.kb04.starroad.Dto.policy.PolicyResponseDto;
 import com.kb04.starroad.Entity.Policy;
 import com.kb04.starroad.Entity.PolicyHeart;
+import com.kb04.starroad.Exception.ErrorCode;
 import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.MemberRepository;
 import com.kb04.starroad.Repository.PolicyHeartRepository;
@@ -113,7 +114,7 @@ public class PolicyService {
         // 관심정책으로 등록
         Policy policy = policyRepository.findByNo(policyNo);
         if (policy == null) {
-            throw StarroadException.notFound("정책을 찾을 수 없습니다.");
+            throw new StarroadException(ErrorCode.POLICY_NOT_FOUND);
         }
         policyHeartRepository.save(PolicyHeart.of(memberRepository.findByNo(memberDto.getNo()), policy));
         return PolicyLikeResponseDto.of(true);

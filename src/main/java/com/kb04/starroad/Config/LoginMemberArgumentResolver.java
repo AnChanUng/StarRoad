@@ -1,6 +1,7 @@
 package com.kb04.starroad.Config;
 
 import com.kb04.starroad.Dto.MemberDto;
+import com.kb04.starroad.Exception.ErrorCode;
 import com.kb04.starroad.Exception.StarroadException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -31,7 +32,7 @@ public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolve
         Object loginMember = session == null ? null : session.getAttribute(SESSION_KEY);
 
         if (loginMember == null && parameter.getParameterAnnotation(LoginMember.class).required()) {
-            throw StarroadException.unauthorized("로그인이 필요한 서비스입니다");
+            throw new StarroadException(ErrorCode.LOGIN_REQUIRED);
         }
         return loginMember;
     }

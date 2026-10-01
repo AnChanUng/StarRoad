@@ -9,6 +9,7 @@ import com.kb04.starroad.Dto.board.LikeResponseDto;
 import com.kb04.starroad.Entity.Board;
 import com.kb04.starroad.Entity.Heart;
 import com.kb04.starroad.Entity.Member;
+import com.kb04.starroad.Exception.ErrorCode;
 import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.BoardRepository;
 import com.kb04.starroad.Repository.HeartRepository;
@@ -62,7 +63,7 @@ public class BoardService {
      */
     public List<BoardResponseDto> selectBoardAllOrderByDate(String type) {
         if (!TYPE_FREE.equals(type) && !TYPE_AUTH.equals(type)) {
-            throw StarroadException.badRequest("잘못된 type 값입니다.");
+            throw new StarroadException(ErrorCode.INVALID_BOARD_TYPE);
         }
         return boardRepository.findAll(BoardSpecification.searchBoardByStatusAndType(type, 'Y')).stream()
                 .map(BoardResponseDto::from)
@@ -109,7 +110,7 @@ public class BoardService {
     public BoardResponseDto updateBoard(int no, String memberId, BoardUpdateRequestDto request) {
         Board board = findBoard(no);
         if (!board.isWrittenBy(memberId)) {
-            throw StarroadException.forbidden("다른 사용자의 게시물을 수정할 수 없습니다.");
+            throw new StarroadException(ErrorCode.BOARD_UPDATE_FORBIDDEN);
         }
 
         byte[] newImage = toBytes(request.getNewImage());
@@ -127,7 +128,7 @@ public class BoardService {
     public void deleteBoard(int no, String memberId) {
         Board board = findBoard(no);
         if (!board.isWrittenBy(memberId)) {
-            throw StarroadException.forbidden("삭제 할 권한이 없습니다.");
+            throw new StarroadException(ErrorCode.BOARD_DELETE_FORBIDDEN);
         }
         boardRepository.delete(board);
     }
@@ -143,7 +144,7 @@ public class BoardService {
         Member member = findMember(memberId);
 
         if (heartRepository.findByMemberNoAndBoardNo(member.getNo(), boardNo).isPresent()) {
-            throw StarroadException.conflict("이미 좋아요한 게시글입니다.");
+            throw new StarroadException(ErrorCode.BOARD_ALREADY_LIKED);
         }
         board.increaseLikes();
         heartRepository.save(Heart.of(member, board));
@@ -154,14 +155,14 @@ public class BoardService {
     private Board findBoard(int no) {
         Board board = boardRepository.findByNo(no);
         if (board == null) {
-            throw StarroadException.notFound("게시글을 찾을 수 없습니다.");
+            throw new StarroadException(ErrorCode.BOARD_NOT_FOUND);
         }
         return board;
     }
 
     private Member findMember(String memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> StarroadException.unauthorized("로그인이 필요한 서비스입니다"));
+                .orElseThrow(() -> new StarroadException(ErrorCode.LOGIN_REQUIRED));
     }
 
     private static List<BoardSummaryDto> toSummaries(Page<Board> boards) {
@@ -184,7 +185,7 @@ public class BoardService {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw StarroadException.internal("이미지 업로드에 실패했습니다.");
+            throw new StarroadException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
 }

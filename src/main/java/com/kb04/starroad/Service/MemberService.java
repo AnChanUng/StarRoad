@@ -13,6 +13,7 @@ import com.kb04.starroad.Dto.mypage.PasswordCheckResponseDto;
 import com.kb04.starroad.Dto.mypage.PasswordRequestDto;
 import com.kb04.starroad.Dto.mypage.RewardResponseDto;
 import com.kb04.starroad.Entity.*;
+import com.kb04.starroad.Exception.ErrorCode;
 import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.*;
 
@@ -48,13 +49,13 @@ public class MemberService {
     /** 회원가입. 비밀번호는 암호화해서 저장한다. */
     public MemberResponseDto join(MemberJoinRequestDto request) {
         if (!StringUtils.hasText(request.getId()) || !StringUtils.hasText(request.getPassword())) {
-            throw StarroadException.badRequest("회원정보를 다시 확인해주세요");
+            throw new StarroadException(ErrorCode.INVALID_MEMBER_INFO);
         }
         if (memberRepository.findById(request.getId()).isPresent()) {
-            throw StarroadException.conflict("이미 사용중인 아이디입니다.");
+            throw new StarroadException(ErrorCode.DUPLICATE_MEMBER_ID);
         }
         if (memberRepository.findByEmail(request.getEmail()) != null) {
-            throw StarroadException.conflict("이미 사용중인 이메일입니다.");
+            throw new StarroadException(ErrorCode.DUPLICATE_MEMBER_EMAIL);
         }
 
         String encodedPassword = new BCryptPasswordEncoder().encode(request.getPassword());
@@ -174,7 +175,7 @@ public class MemberService {
     public RewardResponseDto receiveReward(int memberNo, int subNo) {
         Subscription subscription = findSubscription(memberNo, subNo);
         if (toChallenge(subscription).getStatus() != ChallengeResponseDto.REWARD_READY) {
-            throw StarroadException.conflict("리워드를 받을 수 없는 상품입니다.");
+            throw new StarroadException(ErrorCode.REWARD_NOT_AVAILABLE);
         }
 
         int reward = rewardOf(subscription);
@@ -187,10 +188,10 @@ public class MemberService {
     private Subscription findSubscription(int memberNo, int subNo) {
         Subscription subscription = subscriptionRepository.findByNo(subNo);
         if (subscription == null) {
-            throw StarroadException.notFound("가입한 상품을 찾을 수 없습니다.");
+            throw new StarroadException(ErrorCode.SUBSCRIPTION_NOT_FOUND);
         }
         if (!subscription.isOwnedBy(memberNo)) {
-            throw StarroadException.forbidden("본인이 가입한 상품이 아닙니다.");
+            throw new StarroadException(ErrorCode.SUBSCRIPTION_FORBIDDEN);
         }
         return subscription;
     }
@@ -229,7 +230,7 @@ public class MemberService {
     /** 비밀번호 수정. 암호화해서 저장한다. */
     public void memberPasswordUpdate(MemberDto memberDto, PasswordRequestDto request) {
         if (!StringUtils.hasText(request.getPassword())) {
-            throw StarroadException.badRequest("비밀번호를 다시 확인해주세요.");
+            throw new StarroadException(ErrorCode.INVALID_PASSWORD);
         }
         String encPass = new BCryptPasswordEncoder().encode(request.getPassword());
         memberRepository.findByIdAndUpdatePassword(memberDto.getId(), encPass);

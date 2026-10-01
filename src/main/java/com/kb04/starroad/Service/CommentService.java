@@ -5,6 +5,7 @@ import com.kb04.starroad.Dto.board.CommentUpdateRequestDto;
 import com.kb04.starroad.Dto.board.CommentWriteRequestDto;
 import com.kb04.starroad.Entity.Board;
 import com.kb04.starroad.Entity.Comment;
+import com.kb04.starroad.Exception.ErrorCode;
 import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.BoardRepository;
 import com.kb04.starroad.Repository.CommentRepository;
@@ -45,11 +46,11 @@ public class CommentService {
     @Transactional
     public CommentResponseDto writeComment(int memberNo, CommentWriteRequestDto request) {
         if (!StringUtils.hasText(request.getContent())) {
-            throw StarroadException.badRequest("댓글 내용을 입력해주세요.");
+            throw new StarroadException(ErrorCode.COMMENT_CONTENT_REQUIRED);
         }
         Board board = boardRepository.findByNo(request.getBoardNo());
         if (board == null) {
-            throw StarroadException.notFound("게시글을 찾을 수 없습니다.");
+            throw new StarroadException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         Comment comment = commentRepository.save(
@@ -71,11 +72,11 @@ public class CommentService {
     @Transactional
     public CommentResponseDto updateComment(int commentNo, String memberId, CommentUpdateRequestDto request) {
         if (!StringUtils.hasText(request.getContent())) {
-            throw StarroadException.badRequest("댓글 내용을 입력해주세요.");
+            throw new StarroadException(ErrorCode.COMMENT_CONTENT_REQUIRED);
         }
         Comment comment = findComment(commentNo);
         if (!comment.isWrittenBy(memberId)) {
-            throw StarroadException.forbidden("다른 사용자의 댓글을 수정할 수 없습니다.");
+            throw new StarroadException(ErrorCode.COMMENT_UPDATE_FORBIDDEN);
         }
         comment.update(request.getContent());
         return CommentResponseDto.from(comment);
@@ -89,7 +90,7 @@ public class CommentService {
     public void deleteComment(int commentNo, String memberId) {
         Comment comment = findComment(commentNo);
         if (!comment.isWrittenBy(memberId)) {
-            throw StarroadException.forbidden("삭제 할 권한이 없습니다.");
+            throw new StarroadException(ErrorCode.COMMENT_DELETE_FORBIDDEN);
         }
         comment.getBoard().decreaseCommentNum();
         commentRepository.deleteByNo(commentNo);
@@ -97,6 +98,6 @@ public class CommentService {
 
     private Comment findComment(int commentNo) {
         return commentRepository.findByNo(commentNo)
-                .orElseThrow(() -> StarroadException.notFound("해당하는 댓글이 존재하지 않습니다."));
+                .orElseThrow(() -> new StarroadException(ErrorCode.COMMENT_NOT_FOUND));
     }
 }

@@ -19,6 +19,7 @@
     <link rel="icon" href="${path}/resources/static/image/home/logo1.png" type="image/x-icon">
     <link rel="stylesheet" type="text/css" href="${path}/resources/static/css/home/login_home.css">
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
             AOS.init();
@@ -144,32 +145,10 @@
                 <button class="modal_btn">✖ 닫기</button>
             </div>
             <div class="modal_content">
-                <p>
-                    <c:choose>
-                        <c:when test="${message eq 'Y'}">
-                            <span class="modal_user_name">${currentUser}</span>님의 관심 정책으로 등록한 <br>
-                            "<span class="modal_policy">${policy.name}</span>" 정책
-                            <span class="modal_day">
-                                <c:choose>
-                                    <c:when test="${policy.DDay eq '0'}"> 마감 당일</c:when>
-                                    <c:otherwise> D${policy.DDay}</c:otherwise>
-                                </c:choose>
-                            </span>입니다.
-                        </c:when>
-                        <c:otherwise>
-                            <span>${message}</span>
-                        </c:otherwise>
-                    </c:choose>
-                </p>
+                <p id="modal_text"></p>
             </div>
             <div class="modal_btn_div">
-                <button class="modal_btn_link grow2"
-                        <c:choose>
-                            <c:when test="${policy.link ne null}">
-                                onclick="window.open('${policy.link}')"
-                            </c:when>
-                        </c:choose>
-                >👉 정책 신청하러 가기🏃</button>
+                <button class="modal_btn_link grow2" id="modal_policy_link">👉 정책 신청하러 가기🏃</button>
                 <button class="modal_btn_link grow2" onclick="location.href='/starroad/policy';">👉 더 많은 정책 보러 가기🏃</button>
             </div>
             <div class="modal_allDay_close">
@@ -188,6 +167,29 @@
     });
     modal_btn_allDay.addEventListener('click', () => {
         sessionStorage.setItem('modal', "1");
+    });
+
+    // 관심 정책 마감 알림
+    let policyLink = null;
+    document.querySelector("#modal_policy_link").addEventListener('click', () => {
+        if (policyLink) {
+            window.open(policyLink);
+        }
+    });
+
+    api.get("/api/starroad/home/policy-notice").then(function (notice) {
+        const text = document.querySelector("#modal_text");
+        if (notice.exists) {
+            const day = (notice.dday === 0) ? " 마감 당일" : " D" + notice.dday;
+            text.innerHTML = '<span class="modal_user_name">' + escapeHtml(notice.userName) + '</span>님의 관심 정책으로 등록한 <br>'
+                + '"<span class="modal_policy">' + escapeHtml(notice.policyName) + '</span>" 정책 '
+                + '<span class="modal_day">' + escapeHtml(day) + '</span>입니다.';
+            policyLink = notice.link;
+        } else {
+            text.innerHTML = '<span>' + escapeHtml(notice.message) + '</span>';
+        }
+    }).catch(function () {
+        // 알림을 못 가져와도 홈 화면은 그대로 쓴다
     });
 </script>
 

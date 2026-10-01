@@ -1,6 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -12,9 +11,30 @@
     <link rel="stylesheet" href="${path}/resources/static/css/mypage/board.css">
     <!-- jquery 링크, navbar -->
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
+
+            api.get("/api/starroad/mypage/comments").then(function (comments) {
+                let html = '';
+                comments.forEach(function (comment) {
+                    html += '<div class="b_contents">'
+                        + '<span class="b_type">' + (comment.boardType === "F" ? "자유게시판" : "인증게시판") + '</span><br>'
+                        + '<div class="b_title"><a href="/starroad/board/detail?no=' + encodeURIComponent(comment.boardNo)
+                        + '" class="b_title">' + escapeHtml(comment.content) + '</a></div>'
+                        + '<div class="w_t_d">'
+                        + '<div class="w_title">' + escapeHtml(comment.boardTitle) + '</div>'
+                        + '<div class="w_date">' + escapeHtml(formatDate(comment.regdate)) + '</div>'
+                        + '</div>'
+                        + '</div>';
+                });
+                document.getElementById("comments_list").innerHTML = html;
+            }).catch(function (error) {
+                if (error.status !== 401) {
+                    alert(error.message);
+                }
+            });
         });
     </script>
 </head>
@@ -36,18 +56,7 @@
             <a id="not_sel" href="/starroad/mypage/board">작성글</a>&nbsp;
             <a id="sel" href="/starroad/mypage/comment">작성댓글</a>
         </div>
-        <section>
-            <c:forEach var="comment" items="${comments}">
-                <div class="b_contents">
-                    <span class="b_type">${comment.board.type.equals("0")?"자유게시판":"인증게시판"}</span><br>
-                    <div class="b_title"><a href="/starroad/board/detail?no=${comment.board.no}" class="b_title">${comment.content}</a></div>
-                    <div class="w_t_d">
-                        <div class="w_title">${comment.board.title}</div>
-                        <div class="w_date">${comment.regdate.toString().substring(0,10)}</div>
-                    </div>
-                </div>
-            </c:forEach>
-        </section>
+        <section id="comments_list"></section>
     </article>
 </main>
 </body>

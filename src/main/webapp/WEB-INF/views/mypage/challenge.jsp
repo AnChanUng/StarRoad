@@ -1,4 +1,3 @@
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ page language="java" contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <!DOCTYPE html>
@@ -12,45 +11,50 @@
     <link rel="stylesheet" href="${path}/resources/static/css/mypage/challenge.css">
     <!-- jquery 링크, navbar -->
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
-            let name = ""
-            let ss_no = 0
-            let period = 0
+            let challenges = []
+            let selected = null
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp")
 
+            api.get("/api/starroad/mypage/challenges").then(function (data) {
+                challenges = data
+                const sel_sub = document.getElementById("sel_sub")
+                challenges.forEach((challenge, idx) => {
+                    let option = document.createElement("option")
+                    option.value = idx
+                    option.textContent = String.fromCharCode(160) + challenge.name   // 앞에 &nbsp; 한 칸
+                    sel_sub.appendChild(option)
+                })
+            }).catch(function (error) {
+                if (error.status !== 401) {
+                    alert(error.message)
+                }
+            })
+
             $("#sel_sub").change(function () {
-                let idx = document.getElementById("sel_sub").selectedIndex - 1
-                let subscriptions = "${subscriptions}".split("SubscriptionDto(")
-                subscriptions.shift()
-                let paymentLogs = "${paymentLogs}".substring(2, "${paymentLogs}".length - 2).split("], [")
+                selected = challenges[Number($(this).val())]
+                if (!selected) return
 
-                let sub = subscriptions[idx].split(", ")
-                ss_no = sub[0].split("=")[1]
-                $("#ss_no_val").attr("value", ss_no)
-                name = sub[21].split("=")[1]
-                $("#sub_name").text(name)
-                $("#name_val").attr("value", name)
-                $("#sub_attr").text(sub[23].split("=")[1])
-                $("#sub_exp").text(sub[22].split("=")[1])
-                period = sub[32].split("=")[1]
-                $("#period_val").attr("value", period)
-                $("#sub_period").text(period + "개월")
-                $("#sub_price").text(sub[33].split("=")[1].split(")")[0] * 0.1 + "만원")
+                $("#sub_name").text(selected.name)
+                $("#sub_attr").text(selected.attribute)
+                $("#sub_exp").text(selected.explain)
+                $("#sub_period").text(selected.period + "개월")
+                $("#sub_price").text(selected.price * 0.1 + "만원")
 
-                let tmp  = paymentLogs[idx].split("][")
-                let logs = tmp[0].split(", ")
-                let dates = tmp[1].split(", ")
-                let status = logs.pop()
+                let logs = selected.paymentDays
+                let dates = selected.paymentMonths
+                let status = selected.status
 
                 const star_cont = document.querySelector('#star_container')
                 star_cont.innerHTML = ''
                 logs.forEach((st, idx) => {
                     let star_b = document.createElement("div")
                     star_b.className = "star_b"
-                    if (st !== "0") {
+                    if (st !== 0) {
                         let star = document.createElement("img")
-                        star.src = "${path}/resources/static/image/mypage/stars/" + st +".png"
+                        star.src = "${path}/resources/static/image/mypage/stars/" + encodeURIComponent(st) + ".png"
                         star.className = "star"
                         star.style.left = String(Math.random() * 75 + 5) + "px"
                         star.style.top = String(Math.random() * (parseInt(300 / parseInt(logs.length/6))-40)) + "px"
@@ -67,7 +71,7 @@
                 $("#sel_pic").css("display", "none")
                 $("#pic_exp").css("display", "none")
 
-                if (status === "-1") {          // 성공
+                if (status === -1) {          // 성공
                     $("#reward_btn").text("리워드를 받으세요 🥳")
                         .attr("disabled", false)
                         .css({
@@ -76,7 +80,7 @@
                             "color": "black",
                             "cursor": "pointer"
                         })
-                } else if (status === "-2") {   // 리워드를 이미 받았을 때, 끝났을 때
+                } else if (status === -2) {   // 리워드를 이미 받았을 때, 끝났을 때
                     $("#reward_btn").text("완주 성공! 😎")
                         .attr("disabled", true)
                         .css({
@@ -86,7 +90,7 @@
                             "cursor": "unset"
                         })
                 } else {
-                    $("#reward_btn").text("").append("<strong>" + status + "</strong>" + "개월 남았어요 💪")
+                    $("#reward_btn").text("").append("<strong>" + Number(status) + "</strong>" + "개월 남았어요 💪")
                         .attr("disabled", true)
                         .css({
                             "display": "block",
@@ -96,9 +100,17 @@
                         })
                 }
             })
+
+            // 리워드 받기 화면으로 이동
+            $("#reward_btn").click(function () {
+                if (selected) {
+                    location.href = "/starroad/mypage/reward?subNo=" + encodeURIComponent(selected.subNo)
+                }
+            })
         });
     </script>
 </head>
+<body>
 <div id="navbar"></div>
 <main>
     <aside>
@@ -115,9 +127,6 @@
         <div>
             <select name="subscription" id="sel_sub">
                 <option disabled selected>가입하신 적금을 선택해주세요</option>
-                <c:forEach items="${subscriptions}" var="subscription" varStatus="status">
-                    <option value="${status.index}">&nbsp;${subscription.prod.name}</option>
-                </c:forEach>
             </select>
 
             <section id="sel_pic_exp">
@@ -145,13 +154,11 @@
                 <div id="star_container"></div>
             </section>
 
-            <form action="/starroad/mypage/reward" method="post" style="margin-top:70px">
-                <input type="hidden" id="name_val" name="name">
-                <input type="hidden" id="period_val" name="period">
-                <input type="hidden" id="ss_no_val" name="sub_no">
-                <button id="reward_btn"></button>
-            </form>
+            <div style="margin-top:70px">
+                <button id="reward_btn" type="button"></button>
+            </div>
         </div>
     </article>
 </main>
+</body>
 </html>

@@ -1,6 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -15,11 +14,40 @@
     <title>STARROAD</title>
     <link rel="icon" href="${path}/resources/static/image/home/logo1.png" type="image/x-icon">
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
 
     <script type="text/javascript">
         $(function () {
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
+            loadBoards();
         });
+
+        // 게시판 메인: 인기글·자유게시판·인증방 글 목록을 받아 그린다
+        async function loadBoards() {
+            try {
+                const data = await api.get('/api/starroad/boards/main');
+                renderBoardList('popularBoardList', data.popularBoard);
+                renderBoardList('freeBoardList', data.freeBoard);
+                renderBoardList('authBoardList', data.authBoard);
+            } catch (e) {
+                console.error('게시글 목록을 불러오지 못했습니다:', e.message);
+            }
+        }
+
+        function renderBoardList(containerId, boards) {
+            let html = '';
+            (boards || []).slice(0, 6).forEach(function (board) {
+                html += '<p>'
+                    + '<div class="detailType">' + escapeHtml(board.detailType) + '</div>'
+                    + '<a href="/starroad/board/detail?no=' + encodeURIComponent(board.no) + '">' + escapeHtml(board.title) + ' </a>'
+                    + '<div class="right-align">'
+                    + '<img src="/resources/static/image/board/likes.png" alt="좋아요" class="like-icon"> '
+                    + escapeHtml(board.likes)
+                    + '</div>'
+                    + '</p>';
+            });
+            document.getElementById(containerId).innerHTML = html;
+        }
     </script>
 
 
@@ -65,19 +93,7 @@
             <h2>인기게시판</h2>
             <a href="/starroad/board/popular" class="board-detail">더보기 ></a>
         </div>
-        <div class="board-list">
-            <c:forEach items="${popularBoard.content}" var="board" begin="0" end="5">
-                <p>
-                <div class="detailType">${board.detailType}</div>
-                <a href="/starroad/board/detail?no=${board.no}">${board.title} </a>
-
-                <div class="right-align">
-                    <img src="${path}/resources/static/image/board/likes.png" alt="좋아요" class="like-icon">
-                        ${board.likes}
-                </div>
-                </p>
-            </c:forEach>
-        </div>
+        <div class="board-list" id="popularBoardList"></div>
     </div>
 
     <div class="board">
@@ -86,19 +102,7 @@
             <h2>자유게시판</h2>
             <a href="/starroad/board/free?type=F" class="board-detail">더보기 ></a>
         </div>
-        <div class="board-list">
-            <c:forEach items="${freeBoard.content}" var="board" begin="0" end="5">
-                <p>
-                <div class="detailType">${board.detailType}</div>
-                <a href="/starroad/board/detail?no=${board.no}">${board.title} </a>
-
-                <div class="right-align">
-                    <img src="${path}/resources/static/image/board/likes.png" alt="좋아요" class="like-icon">
-                        ${board.likes}
-                </div>
-                </p>
-            </c:forEach>
-        </div>
+        <div class="board-list" id="freeBoardList"></div>
     </div>
 
     <div class="board">
@@ -107,19 +111,7 @@
             <h2>인증게시판</h2>
             <a href="/starroad/board/free?type=C" class="board-detail">더보기 ></a>
         </div>
-        <div class="board-list">
-            <c:forEach items="${authBoard.content}" var="board" begin="0" end="5">
-                <p>
-                <div class="detailType">${board.detailType}</div>
-                <a href="/starroad/board/detail?no=${board.no}">${board.title} </a>
-
-                <div class="right-align">
-                    <img src="${path}/resources/static/image/board/likes.png" alt="좋아요" class="like-icon">
-                        ${board.likes}
-                </div>
-                </p>
-            </c:forEach>
-        </div>
+        <div class="board-list" id="authBoardList"></div>
     </div>
 </div>
 

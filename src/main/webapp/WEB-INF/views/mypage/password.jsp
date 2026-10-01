@@ -11,25 +11,22 @@
     <link rel="stylesheet" href="${path}/resources/static/css/mypage/check_password.css">
     <!-- jquery 링크, navbar -->
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
 
             function check_password(input_pw) {
-                $.ajax({
-                    type: 'post',
-                    url: "/api/starroad/mypage/check-password",
-                    data: {"inputPw": input_pw},
-                    success: function (data) {
-                        if (data !== "") {
-                            $("#check_msg").text(data);
-                            $("#password").css({"border": "red solid 1px", "outline-color": "red"})
-                        } else {
-                            $("#check_c").css("display", "none")
-                            $("#password_c").load("${path}/resources/common_jsp/password.jsp");
-                        }
-                    },
-                    error: function (error) {
+                api.post("/api/starroad/mypage/check-password", {password: input_pw}).then(function (data) {
+                    if (!data.matched) {
+                        $("#check_msg").text("비밀번호를 잘못 입력했습니다. 다시 입력해주세요.");
+                        $("#password").css({"border": "red solid 1px", "outline-color": "red"})
+                    } else {
+                        $("#check_c").css("display", "none")
+                        $("#password_c").load("${path}/resources/common_jsp/password.jsp");
+                    }
+                }).catch(function (error) {
+                    if (error.status !== 401) {
                         alert("잠시 후 시도해주세요.");
                     }
                 });
@@ -62,7 +59,7 @@
     </aside>
     <article>
         <section id="check_c">
-            <form id="check_m" method="post" action="/starroad/mypage/password">
+            <form id="check_m" onsubmit="return false;">
                 <div id="m_title">비밀번호를 입력해주세요</div>
                 <label>
                     <input id="password" name="password" type="password" placeholder=" 8~12자리 영문/숫자 조합 (대소문자 구분)">

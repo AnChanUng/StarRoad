@@ -2,8 +2,8 @@ package com.kb04.starroad.Controller;
 
 import com.kb04.starroad.Dto.*;
 import com.kb04.starroad.Dto.product.BaseRateDto;
-import com.kb04.starroad.Dto.product.ConditionDto;
 import com.kb04.starroad.Dto.product.ProductResponseDto;
+import com.kb04.starroad.Service.MaturityCalculator;
 import com.kb04.starroad.Service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,7 +14,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,8 +43,10 @@ public class ProductController {
         } else { // 로그인 한 경우 첫 페이지
             MemberDto loginMember = member;
             Double monthlyAvailablePrice = getMonthlyAvailablePricePerMember(loginMember);
-            setUserInfoInModel(model, loginMember, monthlyAvailablePrice);
+            Map<Integer, Double> memberConditionRates = setUserInfoInModel(model, loginMember, monthlyAvailablePrice);
             productList = productService.getProductList(monthlyAvailablePrice);
+            productService.applyEstimates(productList, monthlyAvailablePrice, memberConditionRates,
+                    null, MaturityCalculator.GENERAL_TAX_RATE);
         }
         setPageIndexInModel(model, page, productList);
         ModelAndView mav = new ModelAndView("product/product");
@@ -65,6 +66,8 @@ public class ProductController {
 
         MemberDto member = getLoginMember(request);
         List<ProductResponseDto> productList = null;
+        Double monthlyAvailablePrice = null;
+        Map<Integer, Double> memberConditionRates = null;
         // 로그인 안한 경우 검색
         if (member == null) {
             model.addAttribute("user", null);
@@ -75,13 +78,13 @@ public class ProductController {
             }
         } else { // 로그인 한 경우 검색
             MemberDto loginMember = member;
-            Double monthlyAvailablePrice = getMonthlyAvailablePricePerMember(loginMember);
+            monthlyAvailablePrice = getMonthlyAvailablePricePerMember(loginMember);
             if (type != null || period != null || query != null) {
                 productList = productService.findByFormAndMember(type.charAt(0), period, query, monthlyAvailablePrice);
             } else {
                 productList = productService.getProductList(monthlyAvailablePrice);
             }
-            setUserInfoInModel(model, loginMember, monthlyAvailablePrice);
+            memberConditionRates = setUserInfoInModel(model, loginMember, monthlyAvailablePrice);
         }
 
         if (type != null)
@@ -92,10 +95,12 @@ public class ProductController {
         }
         if (rate != null) {
             model.addAttribute("rate", rate);
-            if (rate.equals("base"))
-                model.addAttribute("rate_value", 0.154);
-            else
-                model.addAttribute("rate_value", 0.0);
+        }
+        if (member != null) {
+            // 기간별 기본 이율(setBaseRate)을 채운 뒤에 계산해야 고른 기간의 이율이 반영된다
+            double taxRate = "none".equals(rate) ? MaturityCalculator.TAX_FREE : MaturityCalculator.GENERAL_TAX_RATE;
+            productService.applyEstimates(productList, monthlyAvailablePrice, memberConditionRates,
+                    period == null ? null : Integer.valueOf(period), taxRate);
         }
         if (query != null)
             model.addAttribute("query", query);
@@ -140,11 +145,6 @@ public class ProductController {
         return productList;
     }
 
-    private List<ProductResponseDto> setEstimatedAmount(List<ProductResponseDto> productList, Double monthlyAvailablePrice) {
-
-        return productList;
-    }
-
     private void setPageIndexInModel(Model model, @RequestParam(defaultValue = "1") int page, List<ProductResponseDto> productList) {
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, productList.size());
@@ -154,16 +154,11 @@ public class ProductController {
         model.addAttribute("currentPage", page);
     }
 
-    private void setUserInfoInModel(Model model, MemberDto loginMember, Double monthlyAvailablePrice) {
-        List<ConditionDto> memberConditions = productService.getMemberConditions(loginMember);
-        Map<Integer, Double> groupedData = new HashMap<>();
-        for (ConditionDto condition : memberConditions) {
-            int prodNo = condition.getProd().getNo();
-            double conditionRate = condition.getRate();
-            groupedData.put(prodNo, groupedData.getOrDefault(prodNo, 0.0) + conditionRate);
-        }
+    private Map<Integer, Double> setUserInfoInModel(Model model, MemberDto loginMember, Double monthlyAvailablePrice) {
+        Map<Integer, Double> memberConditionRates = productService.getMemberConditionRates(loginMember);
         model.addAttribute("user", loginMember.getName());
         model.addAttribute("monthlyAvailablePrice", monthlyAvailablePrice);
-        model.addAttribute("memberConditionRates", groupedData);
+        model.addAttribute("memberConditionRates", memberConditionRates);
+        return memberConditionRates;
     }
 }

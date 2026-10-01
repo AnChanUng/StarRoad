@@ -142,20 +142,19 @@
                 </div>
                 <c:if test="${user ne null}">
                     <div id="member" class="content">
-                        현재 ${user}님의 자산으로 계산된<br>
                         <c:choose>
-                            <%--                            회원우대적용--%>
-                            <c:when test="${memberConditionRates.containsKey(item.no)}">
+                            <%-- 계산은 MaturityCalculator 가 한다. 회원이 충족한 우대금리만 반영된 금액이다. --%>
+                            <c:when test="${item.estimate ne null}">
+                                현재 ${user}님의 자산으로 계산된<br>
                                 만기 예상 금액은<br>
                                 세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                           value="${((monthlyAvailablePrice * 1000 * item.maxPeriod) * (1 + (((item.maxRate - item.maxConditionRate + memberConditionRates.get(item.no))*(item.maxRatePeriod + 1) / 24) * (1 - 0.154)) / 100))}"/></span>원
-                                입니다.
+                                                           value="${item.estimate.total}"/></span>원
+                                입니다.<br>
+                                (${item.estimate.months}개월 · 연 ${item.estimate.appliedRate}% 적용)
                             </c:when>
                             <c:otherwise>
-                                만기 예상 금액은<br>
-                                세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                           value="${((monthlyAvailablePrice * 1000 * item.maxPeriod) * (1 + (((item.maxRate - item.maxConditionRate)*(item.maxRatePeriod + 1) / 24) * (1 - 0.154)) / 100))}"/></span>원
-                                입니다.
+                                이미 저축 목표만큼 납입하고 있어<br>
+                                만기 예상 금액을 계산하지 않았습니다.
                             </c:otherwise>
                         </c:choose>
 

@@ -1,8 +1,9 @@
 package com.kb04.starroad.Config;
 
+import com.kb04.starroad.Ai.GuardrailAdvisor;
+import com.kb04.starroad.Ai.RagRetrievalAdvisor;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatProperties;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -26,9 +27,23 @@ public class RagConfig {
         return SimpleVectorStore.builder(embeddingModel).build();
     }
 
+    /**
+     * 챗봇용 ChatClient. 모든 호출이 아래 Advisor 체인을 거친다.
+     * <ol>
+     *   <li>{@link GuardrailAdvisor} — 입력 검사 / (돌아올 때) 출력 검사</li>
+     *   <li>{@link RagRetrievalAdvisor} — L1 검색 게이트 + L2 자료 주입</li>
+     *   <li>LLM 호출</li>
+     * </ol>
+     * 실행 순서는 등록 순서가 아니라 각 Advisor 의 {@code getOrder()} 로 정해진다.
+     *
+     * <p>자동설정된 {@code ChatClient.Builder} 를 쓰는 이유는 ObservationRegistry 가 연결돼
+     * 있어서다. 그래야 토큰 사용량·호출 시간이 Actuator 지표로 기록된다.
+     */
     @Bean
-    public ChatClient chatClient(ChatModel chatModel) {
-        return ChatClient.builder(chatModel).build();
+    public ChatClient chatClient(ChatClient.Builder builder,
+                                 GuardrailAdvisor guardrailAdvisor,
+                                 RagRetrievalAdvisor ragRetrievalAdvisor) {
+        return builder.defaultAdvisors(guardrailAdvisor, ragRetrievalAdvisor).build();
     }
 
     /**

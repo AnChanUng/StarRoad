@@ -30,6 +30,9 @@ public class ProductResponseDto {
 
     private String link;
 
+    /** 로그인한 회원 기준 만기 예상 금액. 비로그인이거나 납입 가능액이 없으면 null */
+    private MaturityEstimateDto estimate;
+
     public Product toEntity() {
         return Product.builder()
                 .no(no)

@@ -7,16 +7,6 @@
 <br/>
 <br/>
 
-## 🐳 기술 스택 
-|||
-|---|---|
-| **Frontend** |<img src="https://img.shields.io/badge/html5-E34F26?style=for-the-badge&logo=html5&logoColor=white"> <img src="https://img.shields.io/badge/css-1572B6?style=for-the-badge&logo=css3&logoColor=white"> <img src="https://img.shields.io/badge/javascript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=white"> <img src="https://img.shields.io/badge/jsp-004088?style=for-the-badge&logo=jsp&logoColor=white"> |
-| **Backend** | <img src="https://img.shields.io/badge/SpringBoot-6DB33F?style=for-the-badge&logo=SpringBoot&logoColor=white"> <img src="https://img.shields.io/badge/MAven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white"> <img src="https://img.shields.io/badge/spring data jpa-6DB33F?style=for-the-badge&logo=SpringBoot&logoColor=white"> <img src="https://img.shields.io/badge/java 21-007396?style=for-the-badge&logo=openjdk&logoColor=white"> |
-| **AI** | <img src="https://img.shields.io/badge/spring ai-6DB33F?style=for-the-badge&logo=SpringBoot&logoColor=white"> <img src="https://img.shields.io/badge/ollama-000000?style=for-the-badge&logo=ollama&logoColor=white"> <img src="https://img.shields.io/badge/onnx runtime-005CED?style=for-the-badge&logo=onnx&logoColor=white"> |
-| **Database** | <img src="https://img.shields.io/badge/oracle-F80000?style=for-the-badge&logo=oracle&logoColor=white"> <img src="https://img.shields.io/badge/h2-1021FF?style=for-the-badge&logo=h2&logoColor=white"> |
-| **Tool** | <img src="https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white"> <img src="https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white"> <img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white"> <img src="https://img.shields.io/badge/notion-000000?style=for-the-badge&logo=notion&logoColor=white"> |
-|||
-
 
 <br/>
 
@@ -33,6 +23,18 @@
 ## 🐳 주요 기능
 ### 🍿 KB 예적금 상품 추천
 국민 은행 내의 금융 상품 중 사용자의 우대 조건을 포함한 최대 이율 및 월 수입과 저금 목표치를 고려하여 상품 만기 시 받을 수 있는 최대 금액을 계산하여 제공합니다. 
+
+같은 상품이라도 충족한 우대 조건이 달라 실제로 받는 이율은 사람마다 다릅니다. 계산은 `MaturityCalculator`가 세 단계로 합니다.
+
+| 단계 | 계산 |
+|---|---|
+| 적용 이율 | 기본 금리(최고 금리 − 최대 우대금리, 기간을 고르면 그 기간의 기본 금리) + **회원이 충족한 우대금리**. 최고 금리를 넘지 않습니다. |
+| 가입 기간 | 회원이 고른 기간(상품 최장 기간 이내). 고르지 않으면 최고 금리가 적용되는 기간. |
+| 세후 수령액 | 월 납입액 × n + 세전 이자 − 세금. 세전 이자 = 월 납입액 × n(n+1)/2 × 연 이율 / 12 (단리). 일반과세 15.4% 또는 비과세. |
+
+월 납입액은 `월 수입 × 저축 목표(%) − 이미 납입 중인 적금`입니다. 
+예: 최고 연 5.00%(우대 1.20%p 포함) 적금에 월 30만원을 24개월 넣으면, 우대 조건을 못 채운 회원은 연 3.80%로 7,441,110원, 
+0.50%p를 채운 회원은 연 4.30%로 7,472,835원을 받습니다. 계산 규칙은 `MaturityCalculatorTest`, `ProductEstimateTest`로 검증합니다.
 
 ### 🍿 자산 차트 및 적금 챌린지
 현재까지 KB국민은행과 거래한 내역을 토대로 구성한 자산 차트를 제공합니다. 매달 적금 납입 시 제공하는 별을 모두 모으면 리워드(포인트리)를 지급합니다. 
@@ -54,15 +56,15 @@
 
 | | 방어 | 동작 |
 |---|---|---|
-| **L1** | 검색 게이트 | 유사도가 기준(0.83) 미만이면 **LLM을 호출조차 하지 않고** 답변을 거부합니다. 묻지 않으면 지어낼 기회가 없습니다. |
+| **L1** | 검색 게이트 | 유사도가 기준(0.85) 미만이면 **LLM을 호출조차 하지 않고** 답변을 거부합니다. 묻지 않으면 지어낼 기회가 없습니다. |
 | **L2** | 컨텍스트 한정 | 검색된 자료 밖의 지식 사용을 프롬프트로 금지합니다. |
 | **L3** | 인용 검증 | 답변의 `[n]` 인용번호를 파싱해 실제 DB 레코드와 연결합니다. 범위를 벗어난 번호는 버리고, 하나도 인용하지 않으면 화면에 경고를 띄웁니다. |
 | **L4** | 숫자 비위임 | 금리·기간은 DB 원본값을 출처 카드에 그대로 실어, LLM이 쓴 숫자와 화면에서 대조되게 합니다. |
 
-L1의 임계값 0.83은 짐작이 아니라 실측값입니다. `RagRetrievalCalibrationTest`로 측정한 결과 
-관련 질문은 0.872~0.911, 무관한 질문은 0.778~0.797이 나왔습니다. 
-임베딩 모델 특성상 무관한 문장도 0.78 근처가 나오기 때문에, 임계값을 낮게 잡으면 
-"오늘 날씨 어때?"(0.797) 같은 질문이 게이트를 통과해 L1이 무력해집니다.
+L1의 임계값 0.85는 짐작이 아니라 실측값입니다. `RagRetrievalEvalTest`가 평가셋으로 
+top-k 4종 × 임계값 8종을 모두 비교합니다. 정답 자료의 최저점은 0.8727, 무관한 질문의 최고점은 
+0.8242("오늘 서울 날씨 어때?")였습니다. 처음 쓰던 0.83은 날씨 질문과 0.006 차이밖에 나지 않아, 
+두 값의 중간인 0.85로 올렸습니다. 수정 전후 기록은 [포트폴리오 정리](docs/PORTFOLIO.md#6-수정-전후-기록)에 있습니다.
 
 **실측 동작**
 
@@ -72,6 +74,44 @@ L1의 임계값 0.83은 짐작이 아니라 실측값입니다. `RagRetrievalCal
 | "KB청년희망적금 최고 금리가 몇 퍼센트야?" | 연 5.00% / 최소 10,000원 — DB 원본과 일치 |
 | "부산시 월세 지원 정책 조건이 어떻게 돼?" | 자료에 없다고 답하고 **지어내지 않음** (L1 통과 → L2가 차단) |
 | "오늘 서울 날씨 어때?" | **0.069초** — L1에서 차단, LLM 미호출 |
+
+<br/>
+
+## 🐳 가드레일과 관측성
+
+입력·출력 검사를 Spring AI Advisor(`GuardrailAdvisor`) 한곳에 모았습니다.
+
+| 단계 | 막는 것 | 결과 |
+|---|---|---|
+| 입력 | 프롬프트 주입 금지 문구, 주민번호·휴대폰·카드번호, 500자 초과 | 검색도 LLM 호출도 하지 않고 차단 |
+| 출력 | 답변 속 개인정보, 시스템 프롬프트 문구 유출 | 안내 문구로 교체 |
+
+전체 요청 수와 차단 횟수는 Spring Boot Actuator로 확인합니다.
+
+```bash
+curl localhost:8080/actuator/metrics/starroad.chat.requests      # outcome 별 요청 수
+curl localhost:8080/actuator/metrics/starroad.guardrail.blocked  # stage·rule 별 차단 수
+```
+
+Postman 컬렉션(`docs/postman/`)으로 정상 요청과 차단할 요청을 보내 볼 수 있습니다. 
+문자열 규칙이라 말 바꾸기나 다른 언어 같은 우회는 막지 못합니다. 이 한계는 테스트와 문서에 정리해 두었습니다.
+
+<br/>
+
+## 🐳 품질 평가
+
+| 테스트 | 무엇을 보나 | LLM |
+|---|---|---|
+| `GuardrailRulesTest`, `ChatPipelineTest` | 차단 규칙, 차단 시 LLM 미호출, 지표 기록 | 불필요 |
+| `RagRetrievalEvalTest` | 평가셋 33문항으로 hit@k·거부율 측정, 설정 조합 비교, 기준선 대비 회귀 확인 | 불필요 |
+| `RagAnswerEvalTest` | 인용·핵심 숫자 규칙 검사 + LLM 평가자 + 사람 검토용 리포트 | 필요 |
+
+```bash
+mvnw test                                                                    # LLM 없이 도는 테스트 전부
+mvnw test -Dtest=RagAnswerEvalTest -Deval.llm=true -Deval.profiles=dev,ollama # 답변 평가
+```
+
+설계 선택의 이유와 수정 전후 기록은 [docs/PORTFOLIO.md](docs/PORTFOLIO.md)에 정리했습니다.
 
 <br/>
 

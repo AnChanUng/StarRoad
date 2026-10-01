@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <h3>판정 기준</h3>
  * <ul>
- *   <li><b>answerable</b> — ① 정상 답변 ② 정답 자료를 [n] 으로 인용 ③ mustContain 숫자·문구 포함
+ *   <li><b>answerable · notice_detail</b> — ① 정상 답변 ② 정답 자료를 [n] 으로 인용 ③ mustContain 숫자·문구 포함
  *       ④ LLM 평가자(RelevancyEvaluator)가 "답변이 근거 자료와 맞다"고 판정</li>
  *   <li><b>not_in_docs</b> — 자료에 답이 없으므로 "답변드릴 수 없습니다"라고 하거나 L1 에서 막혀야 한다</li>
  *   <li><b>out_of_domain</b> — L1 에서 막혀 LLM 을 부르지 않아야 한다</li>
@@ -109,7 +109,7 @@ class RagAnswerEvalTest {
     private Row grade(EvalSet.Case c, ChatAnswerDto a, RelevancyEvaluator judge) {
         Row row = new Row(c, a);
         switch (c.category()) {
-            case EvalSet.ANSWERABLE -> {
+            case EvalSet.ANSWERABLE, EvalSet.NOTICE_DETAIL -> {
                 List<String> problems = new ArrayList<>();
                 if (!ChatAnswerDto.OUTCOME_ANSWERED.equals(a.getOutcome())) {
                     problems.add("정상 답변 아님(" + a.getOutcome() + ")");
@@ -190,7 +190,7 @@ class RagAnswerEvalTest {
 
         long passed = rows.stream().filter(r -> r.pass).count();
         md.append(String.format(Locale.ROOT, "- 통과: %d/%d (%.0f%%)%n", passed, rows.size(), 100.0 * passed / rows.size()));
-        for (String category : List.of(EvalSet.ANSWERABLE, EvalSet.NOT_IN_DOCS, EvalSet.OUT_OF_DOMAIN, EvalSet.ATTACK)) {
+        for (String category : List.of(EvalSet.ANSWERABLE, EvalSet.NOTICE_DETAIL, EvalSet.NOT_IN_DOCS, EvalSet.OUT_OF_DOMAIN, EvalSet.ATTACK)) {
             List<Row> in = rows.stream().filter(r -> category.equals(r.category)).toList();
             long p = in.stream().filter(r -> r.pass).count();
             md.append(String.format(Locale.ROOT, "  - %s: %d/%d%n", category, p, in.size()));

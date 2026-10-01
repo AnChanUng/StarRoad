@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 검색(L1) 품질 평가. LLM 없이 임베딩 모델만으로 돈다.
  *
- * <p>평가셋의 질문을 실제 색인(dev 샘플 데이터)에 던져 다음을 잰다.
+ * <p>평가셋의 질문을 실제 색인(dev 샘플 데이터 + 공고문 청크)에 던져 다음을 잰다.
  * <ul>
  *   <li><b>hit@k</b> — 답이 있는 질문에서 정답 자료가 검색 결과 안에 들어왔는가</li>
  *   <li><b>top1</b> — 정답 자료가 1순위인가</li>
@@ -71,7 +71,7 @@ class RagRetrievalEvalTest {
         int maxK = TOP_KS[TOP_KS.length - 1];
         rawResults = new LinkedHashMap<>();
         for (EvalSet.Case c : cases) {
-            if (EvalSet.ANSWERABLE.equals(c.category()) || EvalSet.OUT_OF_DOMAIN.equals(c.category())
+            if (c.answerable() || EvalSet.OUT_OF_DOMAIN.equals(c.category())
                     || EvalSet.NOT_IN_DOCS.equals(c.category())) {
                 rawResults.put(c.id(), retrieval.search(c.question(), maxK, 0.0));
             }
@@ -84,7 +84,7 @@ class RagRetrievalEvalTest {
     void sweepTopKAndThreshold() {
         StringBuilder md = new StringBuilder();
         md.append("# 검색 설정 비교 (top-k × 유사도 임계값)\n\n");
-        md.append("답이 있는 질문 ").append(EvalSet.byCategory(cases, EvalSet.ANSWERABLE).size())
+        md.append("답이 있는 질문 ").append(EvalSet.answerable(cases).size())
                 .append("개, 무관한 질문 ").append(EvalSet.byCategory(cases, EvalSet.OUT_OF_DOMAIN).size())
                 .append("개 기준. `*` 는 현재 설정.\n\n");
         md.append("| top-k | 임계값 | hit@k | top1 | MRR | 무관 질문 거부율 | 자료 밖 질문 L1 통과 |\n");
@@ -129,7 +129,7 @@ class RagRetrievalEvalTest {
 
         List<CaseResult> results = new ArrayList<>();
         for (EvalSet.Case c : cases) {
-            if (EvalSet.ANSWERABLE.equals(c.category())) {
+            if (c.answerable()) {
                 int rank = rankOf(cut(rawResults.get(c.id()), k, t), c.expectedSource());
                 results.add(new CaseResult(c.id(), c.category(), rank > 0, rank));
             } else if (EvalSet.OUT_OF_DOMAIN.equals(c.category())) {
@@ -183,7 +183,7 @@ class RagRetrievalEvalTest {
                 continue;
             }
             // 임계값과 무관하게 점수 분포를 기록한다 — 임계값을 얼마나 여유 있게 잡았는지 보려는 것이다
-            if (EvalSet.ANSWERABLE.equals(c.category())) {
+            if (c.answerable()) {
                 raw.stream().filter(d -> c.expectedSource().equals(name(d))).findFirst()
                         .ifPresent(d -> m.minRelevantScore = Math.min(m.minRelevantScore, score(d)));
             } else if (EvalSet.OUT_OF_DOMAIN.equals(c.category()) && !raw.isEmpty()) {
@@ -191,7 +191,7 @@ class RagRetrievalEvalTest {
             }
             List<Document> docs = cut(raw, k, threshold);
             switch (c.category()) {
-                case EvalSet.ANSWERABLE -> {
+                case EvalSet.ANSWERABLE, EvalSet.NOTICE_DETAIL -> {
                     m.answerable++;
                     int rank = rankOf(docs, c.expectedSource());
                     if (rank > 0) {

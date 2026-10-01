@@ -16,6 +16,8 @@ import java.util.List;
 public final class EvalSet {
 
     public static final String ANSWERABLE = "answerable";
+    /** 답이 정책 공고문 원문(청크)에만 있는 질문. 검색·답변 평가에서는 answerable 과 같이 다룬다. */
+    public static final String NOTICE_DETAIL = "notice_detail";
     public static final String NOT_IN_DOCS = "not_in_docs";
     public static final String OUT_OF_DOMAIN = "out_of_domain";
     public static final String ATTACK = "attack";
@@ -28,7 +30,17 @@ public final class EvalSet {
             .enable(SerializationFeature.INDENT_OUTPUT);
 
     public record Case(String id, String category, String question,
-                       String expectedSource, List<String> mustContain) {
+                       String expectedSource, List<String> mustContain, List<String> evidence) {
+
+        /** 자료에 답이 있는 질문인가 (요약 문서든 공고문이든) */
+        public boolean answerable() {
+            return ANSWERABLE.equals(category) || NOTICE_DETAIL.equals(category);
+        }
+
+        /** 검색된 청크 한 개 안에 모두 들어 있어야 하는 원문 문구 */
+        public List<String> evidenceOrEmpty() {
+            return evidence == null ? List.of() : evidence;
+        }
 
         public List<String> mustContainOrEmpty() {
             return mustContain == null ? List.of() : mustContain;
@@ -50,6 +62,10 @@ public final class EvalSet {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    public static List<Case> answerable(List<Case> cases) {
+        return cases.stream().filter(Case::answerable).toList();
     }
 
     public static List<Case> byCategory(List<Case> cases, String category) {

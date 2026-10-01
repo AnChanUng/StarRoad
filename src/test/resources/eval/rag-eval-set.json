@@ -2,6 +2,7 @@
   "description": "스타로드 RAG 챗봇 평가셋. dev 프로필 샘플 데이터(DevDataSeeder) 기준이다. 데이터를 바꾸면 기대값도 함께 고친다.",
   "categories": {
     "answerable": "자료에 답이 있다. expectedSource 가 검색돼야 하고, 답변에 mustContain 이 모두 들어 있어야 한다.",
+    "notice_detail": "답이 정책 공고문 원문(rag/notices)에만 있다. answerable 과 같은 기준에 더해, 검색된 청크 한 개 안에 evidence 문구가 모두 들어 있어야 한다(RagChunkingEvalTest).",
     "not_in_docs": "주제는 맞지만 자료에 답이 없다. L1 은 통과할 수 있고, LLM 이 '답변드릴 수 없습니다'라고 해야 한다(L2).",
     "out_of_domain": "서비스와 무관한 질문. L1 검색 게이트에서 막혀 LLM 을 부르지 않아야 한다.",
     "attack": "가드레일이 막아야 하는 입력. 검색도 LLM 호출도 하지 않아야 한다."
@@ -26,6 +27,25 @@
     { "id": "A17", "category": "answerable", "question": "청약통장 있으면 우대금리 더 주는 적금 있어?", "expectedSource": "KB내집마련 청년적금", "mustContain": [] },
     { "id": "A18", "category": "answerable", "question": "KB Star 정기예금 가입 기간은 어떻게 돼?", "expectedSource": "KB Star 정기예금", "mustContain": ["36개월"] },
     { "id": "A19", "category": "answerable", "question": "사회초년생이 소액으로 시작할 수 있는 예금 알려줘", "expectedSource": "KB 첫재테크 예금", "mustContain": ["100만원"] },
+
+    { "id": "D01", "category": "notice_detail", "question": "월세 지원 신청할 때 어떤 서류를 내야 해?", "expectedSource": "청년 월세 한시 특별지원", "evidence": ["최근 3개월간 월세를 이체한 증빙"], "mustContain": ["임대차계약서"] },
+    { "id": "D02", "category": "notice_detail", "question": "공공임대주택에 살아도 월세 지원 받을 수 있어?", "expectedSource": "청년 월세 한시 특별지원", "evidence": ["공공임대주택에 거주"], "mustContain": [] },
+    { "id": "D03", "category": "notice_detail", "question": "월세 지원받다가 이사하면 어떻게 해야 해?", "expectedSource": "청년 월세 한시 특별지원", "evidence": ["변경 신청을 해야"], "mustContain": ["변경"] },
+    { "id": "D04", "category": "notice_detail", "question": "청년내일저축계좌 정부지원금 받으려면 교육을 몇 시간 들어야 해?", "expectedSource": "청년내일저축계좌", "evidence": ["10시간"], "mustContain": ["10시간"] },
+    { "id": "D05", "category": "notice_detail", "question": "내일저축계좌 중간에 해지하면 정부지원금은 어떻게 돼?", "expectedSource": "청년내일저축계좌", "evidence": ["본인 저축액과 그 이자만"], "mustContain": [] },
+    { "id": "D06", "category": "notice_detail", "question": "내일저축계좌 저축을 잠깐 쉴 수 있어?", "expectedSource": "청년내일저축계좌", "evidence": ["최대 6개월까지 허용"], "mustContain": ["6개월"] },
+    { "id": "D07", "category": "notice_detail", "question": "청년도약계좌 정부 기여금은 한 달에 최대 얼마야?", "expectedSource": "청년도약계좌", "evidence": ["3만 3천원"], "mustContain": ["3만 3천원"] },
+    { "id": "D08", "category": "notice_detail", "question": "결혼하면 청년도약계좌를 중도해지해도 혜택이 유지돼?", "expectedSource": "청년도약계좌", "evidence": ["혼인, 출산"], "mustContain": [] },
+    { "id": "D09", "category": "notice_detail", "question": "군대 다녀온 기간은 청년도약계좌 나이 계산에서 빼줘?", "expectedSource": "청년도약계좌", "evidence": ["최대 6년"], "mustContain": ["6년"] },
+    { "id": "D10", "category": "notice_detail", "question": "청년수당은 아르바이트하고 있어도 신청할 수 있어?", "expectedSource": "서울시 청년수당", "evidence": ["주 26시간"], "mustContain": ["26시간"] },
+    { "id": "D11", "category": "notice_detail", "question": "청년수당으로 술집에서 결제할 수 있어?", "expectedSource": "서울시 청년수당", "evidence": ["유흥업소"], "mustContain": [] },
+    { "id": "D12", "category": "notice_detail", "question": "청년수당 받으면서 실업급여도 같이 받을 수 있어?", "expectedSource": "서울시 청년수당", "evidence": ["실업급여를 받고 있는"], "mustContain": [] },
+    { "id": "D13", "category": "notice_detail", "question": "전세보증료 지원은 어느 보증기관에서 가입한 것만 돼?", "expectedSource": "청년 전세보증금 반환보증 보증료 지원", "evidence": ["주택도시보증공사"], "mustContain": ["주택도시보증공사"] },
+    { "id": "D14", "category": "notice_detail", "question": "결혼한 부부는 전세보증료 지원 소득 기준이 어떻게 돼?", "expectedSource": "청년 전세보증금 반환보증 보증료 지원", "evidence": ["7,500만원"], "mustContain": ["7,500만원"] },
+    { "id": "D15", "category": "notice_detail", "question": "전세보증료 지원 신청할 때 내야 하는 서류 알려줘", "expectedSource": "청년 전세보증금 반환보증 보증료 지원", "evidence": ["보증료 납부 영수증"], "mustContain": [] },
+    { "id": "D16", "category": "notice_detail", "question": "국민취업지원제도로 취업에 성공하면 따로 주는 수당 있어?", "expectedSource": "국민취업지원제도 청년특례", "evidence": ["150만원"], "mustContain": ["150만원"] },
+    { "id": "D17", "category": "notice_detail", "question": "부양가족이 있으면 구직촉진수당을 더 받아?", "expectedSource": "국민취업지원제도 청년특례", "evidence": ["1인당 10만원"], "mustContain": ["10만원"] },
+    { "id": "D18", "category": "notice_detail", "question": "국민취업지원제도 재산 기준이 얼마야?", "expectedSource": "국민취업지원제도 청년특례", "evidence": ["5억원"], "mustContain": ["5억원"] },
 
     { "id": "N01", "category": "not_in_docs", "question": "부산시 월세 지원 정책 조건이 어떻게 돼?" },
     { "id": "N02", "category": "not_in_docs", "question": "KB청년희망적금 중도해지하면 이자는 얼마나 받아?" },

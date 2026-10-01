@@ -1,12 +1,12 @@
 package com.kb04.starroad.Config;
 
+import com.kb04.starroad.Ai.ClearableVectorStore;
 import com.kb04.starroad.Ai.GuardrailAdvisor;
 import com.kb04.starroad.Ai.RagRetrievalAdvisor;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatProperties;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,8 +23,8 @@ public class RagConfig {
      * VectorStore 인터페이스를 그대로 쓰므로 교체 시 이 빈 정의만 바뀐다.
      */
     @Bean
-    public SimpleVectorStore vectorStore(EmbeddingModel embeddingModel) {
-        return SimpleVectorStore.builder(embeddingModel).build();
+    public ClearableVectorStore vectorStore(EmbeddingModel embeddingModel) {
+        return new ClearableVectorStore(embeddingModel);
     }
 
     /**

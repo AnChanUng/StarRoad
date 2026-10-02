@@ -20,6 +20,21 @@
 
 <br/>
 
+## 🐳 기술 스택
+
+| 구분 | 기술 |
+|---|---|
+| 언어·빌드 | Java 21, Maven (WAR) |
+| 서버 | Spring Boot 3.5.16, Spring MVC, Spring Data JPA, Spring Security |
+| 화면 | JSP · JSTL, JavaScript(fetch), jQuery, Bootstrap 5, Chart.js |
+| DB | Oracle (운영), H2 인메모리 (dev 프로필) |
+| AI | Spring AI 1.1.8 — 생성 모델 Anthropic Claude · Google Gemini · Ollama(로컬) 중 선택 |
+| 임베딩·검색 | JVM 내장 ONNX(multilingual-e5-small), SimpleVectorStore |
+| API 문서·관측 | springdoc-openapi 2.8.17 (Swagger UI), Spring Boot Actuator |
+| 테스트 | JUnit 5 (spring-boot-starter-test) |
+
+<br/>
+
 ## 🐳 주요 기능
 ### 🍿 KB 예적금 상품 추천
 국민 은행 내의 금융 상품 중 사용자의 우대 조건을 포함한 최대 이율 및 월 수입과 저금 목표치를 고려하여 상품 만기 시 받을 수 있는 최대 금액을 계산하여 제공합니다. 

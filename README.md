@@ -1,13 +1,6 @@
 # Starroad 💫
 💸 청년들의 효과적인 자산 운용을 위한 웹 서비스
 
-<img width="1280" alt="starroadscreenshot" src="https://github.com/KB-StarRoad/.github/assets/98302932/ac6f42fe-1693-419f-bc52-cf6cdf697dde">
-
-
-<br/>
-<br/>
-
-
 <br/>
 
 ## 🐳 프로젝트 개요 
@@ -17,6 +10,30 @@
 
 따라서 청년층에게 필요한 청년 정책을 쉽게 찾을 수 있고 현재 본인의 자산을 기반으로 적합한 금융 상품을 추천하고 지속할 수 있도록 돕는 서비스, **스타로드**를 기획하게 되었습니다. 
 
+<br/>
+
+## 🐳 시연 영상 
+**회원 가입**
+
+![part1](https://github.com/KB-StarRoad/.github/assets/98302932/d4a27a32-4db7-4a0b-85ae-f52c9ebf63a5)
+
+<br/>
+
+**청년 금융 정책**
+
+![part2](https://github.com/KB-StarRoad/.github/assets/98302932/2b7783d4-c973-4e5e-8572-6dee6acf80dd)
+
+<br/>
+
+**KB 예적금 상품 추천 및 자산 차트 및 적금 챌린지**
+
+![part3](https://github.com/KB-StarRoad/.github/assets/98302932/9a4bff6e-5369-4d81-9a57-c04751ea0496)
+
+<br/>
+
+**커뮤니티**
+
+![part4](https://github.com/KB-StarRoad/.github/assets/98302932/127c1d04-cb73-4928-93c0-e3b78a15cb81)
 
 <br/>
 
@@ -98,54 +115,3 @@ Postman 컬렉션(`docs/postman/`)으로 정상 요청과 차단할 요청을 �
 mvnw test                                                                    # LLM 없이 도는 테스트 전부
 mvnw test -Dtest=RagAnswerEvalTest -Deval.llm=true -Deval.profiles=dev,ollama # 답변 평가
 ```
-
-설계 선택의 이유와 수정 전후 기록은 [docs/PORTFOLIO.md](docs/PORTFOLIO.md)에 정리했습니다.
-
-<br/>
-
-## 🐳 챗봇 실행 방법
-
-Oracle 없이 인메모리 H2와 샘플 데이터로 바로 띄울 수 있습니다.
-
-```bash
-# 1) 로컬 LLM — API 키 불필요, 인터넷 없이 동작
-#    https://ollama.com/download 설치만 하면 모델(기본값 exaone3.5:2.4b)은 기동 시 자동으로 받습니다
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ollama
-
-# 2) Google Gemini — AI Studio 무료 키 (결제수단 등록 없음)
-set GEMINI_API_KEY=...
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev,gemini
-
-# 3) Anthropic Claude
-set ANTHROPIC_API_KEY=...
-mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-생성 모델은 `spring.ai.model.chat` 하나로 갈아끼웁니다. **임베딩은 어느 쪽이든 JVM 내장 
-ONNX(multilingual-e5-small)를 쓰므로 외부 API를 타지 않습니다.** 따라서 `ollama` 프로필은 
-검색·생성 양쪽 모두 로컬에서 돌아 외부 의존이 0입니다.
-
-<br/>
-
-## 🐳 시연 영상 
-**회원 가입**
-
-![part1](https://github.com/KB-StarRoad/.github/assets/98302932/d4a27a32-4db7-4a0b-85ae-f52c9ebf63a5)
-
-<br/>
-
-**청년 금융 정책**
-
-![part2](https://github.com/KB-StarRoad/.github/assets/98302932/2b7783d4-c973-4e5e-8572-6dee6acf80dd)
-
-<br/>
-
-**KB 예적금 상품 추천 및 자산 차트 및 적금 챌린지**
-
-![part3](https://github.com/KB-StarRoad/.github/assets/98302932/9a4bff6e-5369-4d81-9a57-c04751ea0496)
-
-<br/>
-
-**커뮤니티**
-
-![part4](https://github.com/KB-StarRoad/.github/assets/98302932/127c1d04-cb73-4928-93c0-e3b78a15cb81)

@@ -1,20 +1,23 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.MemberDto;
-import com.kb04.starroad.Dto.SubProdDto;
-import com.kb04.starroad.Dto.SubscriptionDto;
 import lombok.*;
 
 import jakarta.persistence.*;
 
 @Entity
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @SequenceGenerator(name = "subscription_seq", sequenceName = "subscription_seq")
 @Table(name = "subscription")
 public class Subscription {
+
+    /** 리워드를 아직 받지 않음 */
+    public static final char REWARD_NOT_RECEIVED = '0';
+    /** 리워드를 받음 */
+    public static final char REWARD_RECEIVED = '1';
+
     @Id
     @Column(nullable = false)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "subscription_seq")
@@ -34,32 +37,33 @@ public class Subscription {
     @Column(nullable = false)
     private int price;
 
+    @Builder.Default
     @Column(nullable = false)
-    private char received = '0';    // 0: 받지 않음, 1: 받음
+    private char received = REWARD_NOT_RECEIVED;    // 0: 받지 않음, 1: 받음
 
-    public SubscriptionDto toSubscriptionDto() {
-        return SubscriptionDto.builder()
-                .no(no)
-                .member(member.toMemberDto())
-                .prod(prod.toProductDto())
+    /**
+     * 회원이 상품에 가입한다. 리워드는 아직 받지 않은 상태로 시작한다.
+     *
+     * @param period 가입 기간(개월)
+     * @param price  매월 납입액(천원)
+     */
+    public static Subscription subscribe(Member member, Product prod, int period, int price) {
+        return Subscription.builder()
+                .member(member)
+                .prod(prod)
                 .period(period)
                 .price(price)
-                .received(received)
+                .received(REWARD_NOT_RECEIVED)
                 .build();
     }
 
-    public SubProdDto toSubProdDto() {
-        return SubProdDto.builder()
-                .name(prod.getName())
-                .attribute(prod.getAttribute())
-                .explain(prod.getExplain())
-                .period(period)
-                .price(price)
-                .received(received)
-                .build();
+    /** 이 가입 건의 주인이 맞는지 */
+    public boolean isOwnedBy(int memberNo) {
+        return member.getNo() == memberNo;
     }
 
-    public void updateReceived(char status) {
-        this.received = status;
+    /** 만기 리워드를 받았다고 기록한다 */
+    public void receiveReward() {
+        this.received = REWARD_RECEIVED;
     }
 }

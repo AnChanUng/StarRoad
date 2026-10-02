@@ -1,18 +1,23 @@
 package com.kb04.starroad.Service;
 
-import com.kb04.starroad.Dto.board.BoardRequestDto;
+import com.kb04.starroad.Dto.board.BoardMainResponseDto;
 import com.kb04.starroad.Dto.board.BoardResponseDto;
-import com.kb04.starroad.Dto.board.CommentDto;
+import com.kb04.starroad.Dto.board.BoardSummaryDto;
+import com.kb04.starroad.Dto.board.BoardUpdateRequestDto;
+import com.kb04.starroad.Dto.board.BoardWriteRequestDto;
+import com.kb04.starroad.Dto.board.LikeResponseDto;
 import com.kb04.starroad.Entity.Board;
 import com.kb04.starroad.Entity.Heart;
 import com.kb04.starroad.Entity.Member;
+import com.kb04.starroad.Exception.ErrorCode;
+import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.BoardRepository;
 import com.kb04.starroad.Repository.HeartRepository;
 import com.kb04.starroad.Repository.MemberRepository;
 import com.kb04.starroad.Repository.Specification.BoardSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -20,12 +25,19 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class BoardService {
+
+    private static final String TYPE_FREE = "F";
+    private static final String TYPE_AUTH = "C";
+    /** 게시판 메인에 게시판마다 보여 줄 글 수 */
+    private static final int MAIN_LIST_SIZE = 6;
+    /** 인기글 기준 — 최근 7일 안에 좋아요를 이만큼 받은 글 */
+    private static final int POPULAR_MIN_LIKES = 10;
 
     private final BoardRepository boardRepository;
     private final MemberRepository memberRepository;
@@ -33,226 +45,147 @@ public class BoardService {
     private final CommentService commentService;
 
     /**
-     * 게시판 메인 용 - 자유 게시판
+     * 게시판 메인 — 인기글, 자유게시판, 인증방의 최신 글
      */
-    public Page<Board> boardListFree(Pageable pageable) {
-        Page<Board> boardList;
+    public BoardMainResponseDto getMain() {
+        Pageable pageable = PageRequest.of(0, MAIN_LIST_SIZE, Sort.by("regdate").descending());
 
-        boardList = boardRepository.findAllByTypeAndStatusOrderByRegdateDesc("F", 'Y', pageable);
-
-        return boardList;
-    }
-
-    /**
-     * 게시판 메인 용 - 인증 게시판
-     */
-    public Page<Board> boardListAuth(Pageable pageable) {
-        Page<Board> boardList;
-
-        boardList = boardRepository.findAllByTypeAndStatusOrderByRegdateDesc("C", 'Y', pageable);
-
-        return boardList;
-    }
-
-    /**
-     * 게시판 메인 용 - 인기 게시판
-     */
-    public Page<Board> boardListPopular(Pageable pageable) {
-        Page<Board> boardList;
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -7);
-        Date oneWeekAgo = calendar.getTime();
-        boardList = boardRepository.findAllByStatusAndLikesGreaterThanEqualAndRegdateAfterOrderByLikesDesc('Y', 10, oneWeekAgo, pageable);
-
-        return boardList;
+        return BoardMainResponseDto.of(
+                toSummaries(boardRepository.findAllByStatusAndLikesGreaterThanEqualAndRegdateAfterOrderByLikesDesc(
+                        'Y', POPULAR_MIN_LIKES, oneWeekAgo(), pageable)),
+                toSummaries(boardRepository.findAllByTypeAndStatusOrderByRegdateDesc(TYPE_FREE, 'Y', pageable)),
+                toSummaries(boardRepository.findAllByTypeAndStatusOrderByRegdateDesc(TYPE_AUTH, 'Y', pageable)));
     }
 
     /**
      * 게시판 모든 글 출력 - 자유 게시판, 인증방
+     * @param type 게시판 종류 (F: 자유게시판, C: 인증방)
      */
     public List<BoardResponseDto> selectBoardAllOrderByDate(String type) {
-        List<Board> boardList = boardRepository.findAll(BoardSpecification.searchBoardByStatusAndType(type, 'Y'));
-
-        List<BoardResponseDto> dtoList = new ArrayList<>();
-        for(Board board : boardList){
-            dtoList.add(board.toBoardResponseDto());
+        if (!TYPE_FREE.equals(type) && !TYPE_AUTH.equals(type)) {
+            throw new StarroadException(ErrorCode.INVALID_BOARD_TYPE);
         }
-
-        return dtoList;
+        return boardRepository.findAll(BoardSpecification.searchBoardByStatusAndType(type, 'Y')).stream()
+                .map(BoardResponseDto::from)
+                .collect(Collectors.toList());
     }
-
-    /**
-     * 게시판 모든 글 출력 - 인기글
-     */
-//    public List<BoardResponseDto> selectPopularBoard() {
-//        List<Board> boardList = boardRepository.findAllByStatusOrderByLikesDesc('Y');
-//        List<BoardResponseDto> dtoList = new ArrayList<>();
-//
-//        for(Board board : boardList) {
-//            dtoList.add(board.toBoardResponseDto());
-//        }
-//        return dtoList;
-//    }
-
 
     // 게시판 모든 글 출력 - 인기글
     public List<BoardResponseDto> selectPopularBoard() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -7);
-        Date oneWeekAgo = calendar.getTime();
-
-        List<Board> boardList = boardRepository.findAllByStatusAndLikesGreaterThanEqualAndRegdateAfterOrderByLikesDesc('Y', 10, oneWeekAgo);
-
-        List<BoardResponseDto> dtoList = new ArrayList<>();
-        for(Board board : boardList) {
-            dtoList.add(board.toBoardResponseDto());
-        }
-
-        return dtoList;
+        return boardRepository.findAllByStatusAndLikesGreaterThanEqualAndRegdateAfterOrderByLikesDesc(
+                        'Y', POPULAR_MIN_LIKES, oneWeekAgo()).stream()
+                .map(BoardResponseDto::from)
+                .collect(Collectors.toList());
     }
 
     /**
-     * 수정하려는 게시물이 현재 로그인한 유저가 작성한 게시물인지 검사
-     * @param no 게시물 번호
-     * @param currentUserId 현재 로그인한 유저
-     */
-    public boolean canUpdate(int no, String currentUserId) {
-        Optional<Board> boardOptional = boardRepository.findById(no);
-
-        if (boardOptional.isPresent()) {
-            Board board = boardOptional.get();
-            Member writer = board.getMember();
-
-            if (writer != null) {
-                String writerId = writer.getId();
-                return currentUserId != null && currentUserId.equals(writerId);
-            }
-        }
-        return false;
-    }
-
-    /**
-     * canUpdate가 true일 경우 수정하려는 게시물 내용 return
+     * 게시물 상세 보기 — 댓글 포함
      * @param no 게시물 번호
      */
-    public BoardResponseDto getUpdateBoard(int no) {
-        return boardRepository.findByNo(no).toBoardResponseDto();
+    public BoardResponseDto detailBoard(int no) {
+        Board board = findBoard(no);
+        return BoardResponseDto.of(board, commentService.findByBoard(board));
     }
-
-    /**
-     * 게시물 수정
-     * @param no 게시물 번호
-     * @param title 게시물 타이틀
-     * @param content 게시물 내용
-     * @param newImage 게시물 이미지
-     */
-    @Transactional
-    public boolean updateBoard(int no, String title, String content, MultipartFile newImage) throws IOException {
-
-        Optional<Board> optionalBoard = boardRepository.findById(no);
-
-        if(optionalBoard.isPresent()){
-            Board board2 = optionalBoard.get();
-            board2.update(title, content, newImage.isEmpty() ? board2.getImage() : newImage.getBytes());
-            boardRepository.save(board2);
-            return true;
-        }
-        return false;
-    }
-
 
     /**
      * 게시물 등록
      * @param memberId 로그인한 회원 아이디
-     * @param type 게시물 type
-     * @param detailType 게시물 detail type
-     * @param title 게시물 제목
-     * @param content 게시물 내용
-     * @param imageFile 게시물 이미지 파일
      */
-    public void writeBoard(String memberId, String type, String detailType,
-                           String title, String content, MultipartFile imageFile) throws IOException {
+    @Transactional
+    public BoardResponseDto writeBoard(String memberId, BoardWriteRequestDto request) {
+        Member writer = findMember(memberId);
 
-        Optional<Member> optionalMember = memberRepository.findById(memberId);
-        Member member = optionalMember.get();
+        Board board = boardRepository.save(Board.write(writer, request.getType(), request.getDetailType(),
+                request.getTitle(), request.getContent(), toBytes(request.getImage())));
 
-        BoardRequestDto boardDto = new BoardRequestDto();
-        boardDto.setType(type);
-        boardDto.setDetailType(detailType);
-        boardDto.setTitle(title);
-        boardDto.setContent(content);
-        boardDto.setMember(member);
-        boardDto.setImage(imageFile.isEmpty() ? null : imageFile.getBytes());
-
-        Board board = boardDto.toEntity();
-        boardRepository.save(board);
+        return BoardResponseDto.from(board);
     }
 
     /**
-     * 삭제하려는 게시물이 현재 로그인한 유저가 작성한 게시물인지 검사
-     * @param no 게시글 번호
-     * @param currentUserId 로그인한 회원 아이디
-     */
-    public boolean canDelete(int no, String currentUserId) {
-
-        Board board = boardRepository.findByNo(no);
-        Member writer = board.getMember();
-
-        return writer.getId().equals(currentUserId);
-    }
-
-    /**
-     * 게시물 삭제
+     * 게시물 수정. 작성자 본인만 할 수 있다. 새 이미지를 보내지 않으면 기존 이미지를 유지한다.
      * @param no 게시물 번호
+     * @param memberId 로그인한 회원 아이디
      */
-    public void deleteBoard(int no) {
-        boardRepository.deleteById(no);
-    }
-
-    /**
-     * 게시물 상세 보기
-     * @param no 게시물 번호
-     */
-    public BoardResponseDto detailBoard(int no){
-
-        Board board = boardRepository.findByNo(no);
-        if (board == null) return null;
-
-        BoardResponseDto resultDto = board.toBoardResponseDto();
-        List<CommentDto> comments = commentService.findByBoard(board);
-        resultDto.setComments(comments);
-        return resultDto;
-    }
-
-    /**
-     * 로그인 한 유저가 게시물 좋아요 눌렀는지 안 했는지 검사
-     * @param boardNo 게시물 번호
-     * @param memberId 로그인한 유저 아이디
-     * @return 이미 좋아요 눌렀다면 true, 아니라면 false 리턴
-     */
-    public boolean hasLiked(int boardNo, String memberId) {
-        Member member = memberRepository.findById(memberId).get();
-        Optional<Heart> likes = heartRepository.findByMemberNoAndBoardNo(member.getNo(), boardNo);
-
-        return likes.isPresent();
-    }
-
-    /**
-     * 게시물 좋아요 누르기
-     * @param boardNo 게시물 번호
-     * @param memberId 로그인한 유저 아이디
-     */
-    public void increaseLikes(int boardNo, String memberId) {
-
-        Board board = boardRepository.findByNo(boardNo);
-        int currentLikesCount = board.getLikes();
-        board.setLikes(currentLikesCount + 1);
-
-        Member member = memberRepository.findById(memberId).get();
-        heartRepository.save(Heart.builder()
-                .member(member)
-                .board(board)
-                .build());
+    @Transactional
+    public BoardResponseDto updateBoard(int no, String memberId, BoardUpdateRequestDto request) {
+        Board board = findBoard(no);
+        if (!board.isWrittenBy(memberId)) {
+            throw new StarroadException(ErrorCode.BOARD_UPDATE_FORBIDDEN);
         }
+
+        byte[] newImage = toBytes(request.getNewImage());
+        board.update(request.getTitle(), request.getContent(), newImage == null ? board.getImage() : newImage);
+
+        return BoardResponseDto.from(board);
+    }
+
+    /**
+     * 게시물 삭제. 작성자 본인만 할 수 있다.
+     * @param no 게시물 번호
+     * @param memberId 로그인한 회원 아이디
+     */
+    @Transactional
+    public void deleteBoard(int no, String memberId) {
+        Board board = findBoard(no);
+        if (!board.isWrittenBy(memberId)) {
+            throw new StarroadException(ErrorCode.BOARD_DELETE_FORBIDDEN);
+        }
+        boardRepository.delete(board);
+    }
+
+    /**
+     * 게시물 좋아요 누르기. 한 회원이 같은 글에 한 번만 누를 수 있다.
+     * @param boardNo 게시물 번호
+     * @param memberId 로그인한 유저 아이디
+     */
+    @Transactional
+    public LikeResponseDto increaseLikes(int boardNo, String memberId) {
+        Board board = findBoard(boardNo);
+        Member member = findMember(memberId);
+
+        if (heartRepository.findByMemberNoAndBoardNo(member.getNo(), boardNo).isPresent()) {
+            throw new StarroadException(ErrorCode.BOARD_ALREADY_LIKED);
+        }
+        board.increaseLikes();
+        heartRepository.save(Heart.of(member, board));
+
+        return LikeResponseDto.of(board.getLikes());
+    }
+
+    private Board findBoard(int no) {
+        Board board = boardRepository.findByNo(no);
+        if (board == null) {
+            throw new StarroadException(ErrorCode.BOARD_NOT_FOUND);
+        }
+        return board;
+    }
+
+    private Member findMember(String memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new StarroadException(ErrorCode.LOGIN_REQUIRED));
+    }
+
+    private static List<BoardSummaryDto> toSummaries(Page<Board> boards) {
+        return boards.getContent().stream()
+                .map(BoardSummaryDto::from)
+                .collect(Collectors.toList());
+    }
+
+    private static Date oneWeekAgo() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, -7);
+        return calendar.getTime();
+    }
+
+    /** 첨부 파일을 바이트로 읽는다. 파일을 보내지 않았으면 null */
+    private static byte[] toBytes(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw new StarroadException(ErrorCode.IMAGE_UPLOAD_FAILED);
+        }
+    }
 }

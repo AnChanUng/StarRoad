@@ -131,9 +131,42 @@ mvnw test -Dtest=RagAnswerEvalTest -Deval.llm=true -Deval.profiles=dev,ollama # 
 
 <br/>
 
+## 🐳 서버 구조 — 화면과 API 분리
+
+컨트롤러는 화면을 내려 주는 것과 데이터를 내려 주는 것으로 나뉩니다.
+
+| 구분 | URL | 반환 |
+|---|---|---|
+| `PageController` | `/starroad/**` | JSP 화면만. 모델에 데이터를 담지 않습니다. |
+| 그 밖의 `@RestController` | `/api/starroad/**` | `ResponseEntity<DTO>` (JSON) |
+
+화면은 뜬 뒤에 `resources/static/js/common.js` 의 `api.get/post/put/del` 로 API 를 호출해 받은 JSON 으로 그립니다.
+
+```java
+@GetMapping("/asset")
+public ResponseEntity<MypageResponseDto> asset(@LoginMember MemberDto loginMember) {
+    return ResponseEntity.ok(memberService.getAssets(loginMember.getNo()));
+}
+```
+
+- **로그인 회원** — `@LoginMember` 가 세션에서 꺼내 줍니다. 로그인하지 않았으면 401 로 응답합니다.
+- **실패 응답** — 실패의 상태 코드와 안내 문구는 `ErrorCode` enum 한곳에 모여 있습니다. 서비스가
+  `throw new StarroadException(ErrorCode.BOARD_NOT_FOUND)` 로 던지면 `GlobalExceptionHandler` 가
+  `{"code": "BOARD_NOT_FOUND", "message": "게시글을 찾을 수 없습니다."}` 로 바꿉니다. 잘못된 요청 값, 없는 주소,
+  예상하지 못한 예외도 같은 핸들러가 같은 모양으로 응답하고, 스택 트레이스 같은 내부 정보는 로그에만 남깁니다.
+  컨트롤러는 성공 응답만 만듭니다.
+- **객체 생성** — 엔티티와 응답 DTO 는 생성자·빌더를 막고 이름 있는 정적 팩토리 메서드로만 만듭니다.
+  `Board.write(작성자, ...)`, `Comment.write(게시글, 작성자, 내용)`, `Member.join(...)`, `Subscription.subscribe(...)`,
+  `Heart.of(회원, 게시글)`, `BoardResponseDto.from(board)` — 호출하는 쪽만 봐도 무엇을 만드는지 알 수 있습니다.
+
+API 명세는 `/swagger-ui.html` 에서 볼 수 있습니다.
+
+<br/>
+
 ## 🐳 챗봇 실행 방법
 
 Oracle 없이 인메모리 H2와 샘플 데이터로 바로 띄울 수 있습니다.
+dev 프로필에는 체험용 계정(`starroad1` / `starroad1234`)이 함께 들어갑니다.
 
 ```bash
 # 1) 로컬 LLM — API 키 불필요, 인터넷 없이 동작

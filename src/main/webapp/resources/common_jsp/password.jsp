@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,8 +9,7 @@
     <link rel="stylesheet" href="${path}/resources/static/css/common.css">
     <link rel="stylesheet" href="${path}/resources/static/css/mypage/sidebar.css">
     <link rel="stylesheet" href="${path}/resources/static/css/mypage/check_password.css">
-    <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="//code.jquery.com/jquery-latest.min.js"></script>
+    <%-- jQuery 와 common.js 는 이 조각을 불러 쓰는 화면(mypage/password.jsp)이 이미 넣었다 --%>
     <link rel="stylesheet" type="text/css" href="${path}/resources/static/css/member/member.css">
 
     <script type="text/javascript">
@@ -52,8 +52,9 @@
                     checkPassword = true;
                 }
             });
-            $(".submit-button").click(function () {
-                var requiredFields = $("input[required]");
+            $("#password_form").on("submit", async function (e) {
+                e.preventDefault();
+                var requiredFields = $(this).find("input[required]");
 
                 // 모든 필수 필드가 valid한지 확인
                 var allValid = true;
@@ -64,12 +65,19 @@
                     }
                 });
 
-                // 모든 필수 필드가 valid하다면 alert 띄우기
+                // 모든 필수 필드가 valid하다면 수정 요청
                 if (allValid && checkPassword && errorFlag) {
-                    alert("비밀번호수정이 완료되었습니다.");
+                    try {
+                        await api.put("/api/starroad/mypage/password", {password: $("#password1").val()});
+                        alert("비밀번호수정이 완료되었습니다.");
+                        location.href = "/starroad";
+                    } catch (error) {
+                        if (error.status !== 401) {
+                            alert(error.message);
+                        }
+                    }
                 } else {
                     alert("비밀번호를 다시 확인해주세요.");
-                    return false;
                 }
             });
 
@@ -81,9 +89,9 @@
 </head>
 <body>
 <div>
-    <h1>${currentUser.name}님의 정보</h1>
+    <h1>${fn:escapeXml(currentUser.name)}님의 정보</h1>
     <div class="password-container">
-        <form action="/starroad/mypage/password" method="post" enctype="multipart/form-data">
+        <form id="password_form" method="post">
             <table>
                 <tr>
                     <th>비밀번호 수정 <span class="star">*</span></th>

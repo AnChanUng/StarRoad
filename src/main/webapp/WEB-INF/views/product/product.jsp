@@ -1,7 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,12 +15,14 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"/>
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
             AOS.init();
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
         });
     </script>
+    <script src="/resources/static/js/product.js"></script>
 </head>
 <body>
 <div id="navbar"></div>
@@ -69,7 +70,7 @@
                 <div>
                     <div class="search_type content">이자 과세</div>
                     <c:choose>
-                        <c:when test="${user ne null}">
+                        <c:when test="${currentUser ne null}">
                             <ul id="rate" class="content">
                                 <li>
                                     <input type="radio" name="rate" value="base" id="rate_base" class="btn period_btn"
@@ -114,113 +115,12 @@
         </div>
     </nav>
 </div>
+<%-- 상품 목록과 페이지 번호는 product.js 가 /api/starroad/products 응답으로 그린다 --%>
 <div id="product_list">
-    <ul>
-        <c:forEach items="${productItems}" var="item" varStatus="status">
-            <li id="product_item" data-aos="fade-up" data-aos-delay="${200*status.index}" data-aos-duration="400">
-                <div id="product">
-                    <div class="sub">
-                        <c:choose>
-                            <c:when test="${item.type eq 'S'.charAt(0) }">
-                                <div class="type">적금</div>
-                            </c:when>
-                            <c:when test="${item.type eq 'D'.charAt(0)}">
-                                <div class="type">예금</div>
-                            </c:when>
-                        </c:choose>
-                        <div class="attribute">${item.attribute}</div>
-                    </div>
-
-                    <div class="title">
-                        <div class="name">${item.name}</div>
-                        <div class="explain">${item.explain}</div>
-                    </div>
-                    <div class="rate">
-                        최고 연 <span class="max_rate"><span>${item.maxRate}</span>%</span> <c:if
-                            test="${item.maxRatePeriod ne null}">(${item.maxRatePeriod}개월)</c:if>
-                    </div>
-                </div>
-                <c:if test="${user ne null}">
-                    <div id="member" class="content">
-                        <c:choose>
-                            <%-- 계산은 MaturityCalculator 가 한다. 회원이 충족한 우대금리만 반영된 금액이다. --%>
-                            <c:when test="${item.estimate ne null}">
-                                현재 ${user}님의 자산으로 계산된<br>
-                                만기 예상 금액은<br>
-                                세후 <span><fmt:formatNumber type="number" pattern="###,###,###,###,###,###"
-                                                           value="${item.estimate.total}"/></span>원
-                                입니다.<br>
-                                (${item.estimate.months}개월 · 연 ${item.estimate.appliedRate}% 적용)
-                            </c:when>
-                            <c:otherwise>
-                                이미 저축 목표만큼 납입하고 있어<br>
-                                만기 예상 금액을 계산하지 않았습니다.
-                            </c:otherwise>
-                        </c:choose>
-
-                    </div>
-                </c:if>
-                <div class="content">
-                    <button class="search_link_btn"><a href="${item.link}">자세히</a></button>
-                </div>
-
-            </li>
-        </c:forEach>
-    </ul>
+    <ul></ul>
 </div>
 <div aria-label="Page navigation example">
-    <ul class="pagination">
-        <li class="page-item">
-            <a class="page-link" href="#" aria-label="Previous">
-                <span aria-hidden="true">&lt;</span>
-            </a>
-        </li>
-        <c:forEach begin="1" end="${pageEndIndex}" var="i">
-            <li class="page-item"><a class="page-link" href="#" aria-label="${i}" id="${i}_page">${i}</a></li>
-        </c:forEach>
-        <li class="page-item">
-            <a class="page-link" href="#" aria-label="Next">
-                <span aria-hidden="true">&gt;</span>
-            </a>
-        </li>
-    </ul>
+    <ul class="pagination"></ul>
 </div>
-<script>
-    // 페이지 링크 요소를 선택
-    let current_page = ${currentPage};
-    document.getElementById(current_page + "_page").style.color = "#FFCC00FF";
-    document.getElementById(current_page + "_page").style.textDecoration = "underline";
-    document.getElementById(current_page + "_page").style.fontWeight = "bold";
-
-    let next = current_page + 1;
-    let prev = current_page - 1;
-
-    // 페이지 링크에 클릭 이벤트 리스너를 추가
-    const pageLinks = document.querySelectorAll('.page-link');
-    pageLinks.forEach((link) => {
-        link.addEventListener('click', (event) => {
-            event.preventDefault();
-            if (link.getAttribute('aria-label') === 'Previous') {
-                if (current_page > 1) {
-                    window.location.href = '/starroad/product?page=' + prev;
-                }
-            } else if (link.getAttribute('aria-label') === 'Next') {
-                if (parseInt(${pageEndIndex}) > current_page) {
-                    window.location.href = '/starroad/product?page=' + next;
-                }
-            } else {
-                window.location.href = '/starroad/product?page=' + link.getAttribute('aria-label');
-            }
-        });
-    });
-    $(document).ready(function () {
-        $('#searchInput').keyup(function (event) {
-            if (event.which === 13) {
-                event.preventDefault();
-                $('form').submit();
-            }
-        });
-    });
-</script>
 </body>
 </html>

@@ -1,6 +1,5 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.board.CommentDto;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -8,9 +7,9 @@ import java.util.Date;
 
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "comments")
 public class Comment {
 
@@ -37,18 +36,24 @@ public class Comment {
     @Column(columnDefinition = "char(1)  default 'Y'", name = "status", nullable = false)
     private Character status;
 
-    public CommentDto toCommentDto() {
-        return CommentDto.builder()
-                .no(no)
+    /** 회원이 게시글에 댓글을 단다. 작성 시각은 지금, 상태는 게시('Y')다. */
+    public static Comment write(Board board, Member writer, String content) {
+        return Comment.builder()
                 .board(board)
-                .member(member)
-                .regdate(regdate)
+                .member(writer)
                 .content(content)
+                .regdate(new Date())
+                .status('Y')
                 .build();
     }
 
     public void update(String content) {
         this.content = content;
+    }
+
+    /** 이 댓글을 쓴 회원의 아이디가 맞는지 */
+    public boolean isWrittenBy(String memberId) {
+        return member != null && member.getId().equals(memberId);
     }
 
 }

@@ -1,5 +1,6 @@
 package com.kb04.starroad.Dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kb04.starroad.Entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+/**
+ * 세션에 담아 두는 로그인 회원 정보.
+ * 암호화된 비밀번호가 들어 있으므로 API 응답으로 내보내지 않는다 — 응답은 {@code MemberResponseDto} 를 쓴다.
+ */
 @Data
 @Builder
 @AllArgsConstructor
@@ -16,6 +21,7 @@ public class MemberDto {
     private int no;
     private String name;
     private String id;
+    @JsonIgnore
     private String password;
     private String birthday;
     private String phone;
@@ -31,27 +37,26 @@ public class MemberDto {
     private int point;
     private int investment;
 
-    public Member toMemberEntity() { // Dto를 Entity로 변환
-        return Member.builder()
-            .no(no)
-            .name(this.name)
-            .id(this.id)
-            .password(this.password)
-            .birthday(this.birthday)
-            .phone(this.phone)
-            .email(this.email)
-            .address(this.address)
-            .job(this.job != null ? this.job : "직업없음")
-            .purpose(this.purpose != null ? this.purpose : "목적없음")
-            .source(this.source != null ? this.source : "원천없음")
-            .goal(this.goal)
-            .status(this.status)
-            .salary(this.salary)
-            .agreement(this.agreement)
-            .point(this.point)
-            .investment(this.investment)
-            .build();
-
+    public static MemberDto from(Member member) {
+        return MemberDto.builder()
+                .no(member.getNo())
+                .name(member.getName())
+                .id(member.getId())
+                .password(member.getPassword())
+                .birthday(member.getBirthday())
+                .phone(member.getPhone())
+                .email(member.getEmail())
+                .address(member.getAddress())
+                .job(member.getJob())
+                .purpose(member.getPurpose())
+                .source(member.getSource())
+                .goal(member.getGoal())
+                .status(member.getStatus())
+                .salary(member.getSalary())
+                .agreement(member.getAgreement())
+                .point(member.getPoint())
+                .investment(member.getInvestment())
+                .build();
     }
 
 }

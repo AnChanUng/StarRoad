@@ -42,11 +42,23 @@
             <!-- 로그인 성공시 navbar-->
             <div>
                 <button class="btn"><a href="/starroad/mypage/asset">마이페이지</a></button>
-                <button class="btn"><a href="/starroad/logout">로그아웃</a></button>
+                <button class="btn"><a href="#" id="logout_link">로그아웃</a></button>
             </div>
         <% } %>
     </nav>
 </header>
+<% if(currentUser != null) { %>
+<script>
+    // 이 조각을 불러 쓰는 화면이 모두 common.js 를 넣는 것은 아니라서 fetch 를 직접 쓴다
+    document.getElementById("logout_link").addEventListener("click", function (e) {
+        e.preventDefault();
+        fetch("/api/starroad/logout", {method: "POST", credentials: "same-origin"})
+            .then(function () {
+                location.href = "/starroad";
+            });
+    });
+</script>
+<% } %>
 
 </body>
 </html>

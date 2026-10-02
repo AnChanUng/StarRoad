@@ -8,6 +8,7 @@
     <link rel="icon" href="${path}/resources/static/image/home/logo1.png" type="image/x-icon">
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="//code.jquery.com/jquery-latest.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <link rel="stylesheet" type="text/css" href="${path}/resources/static/css/common.css">
     <link rel="stylesheet" type="text/css" href="${path}/resources/static/css/member/member.css">
     <script type="text/javascript">
@@ -21,26 +22,19 @@
                 const idPattern = /^[a-zA-Z0-9]{6,12}$/;
 
                 if (idPattern.test(id)) {
-                    $.ajax({
-                        type: 'post',
-                        url: "/starroad/checkMemberId",
-                        data: {"id": id},
-                        success: function (data) {
-                            if (data == "N") {
-                                result = "사용 가능한 아이디입니다.";
-                                $("#result_checkId").html(result).css("color", "green");
-                                idFlag = true;
-                                <%-- $("#password").trigger("focus"); --%>
-                            } else {
-                                result = "이미 사용중인 아이디입니다.";
-                                $("#result_checkId").html(result).css("color", "red");
-                                idFlag = false;
-                            }
-                        },
-                        error: function (error) {
+                    api.get("/api/starroad/members/check-id?id=" + encodeURIComponent(id)).then(function (data) {
+                        if (!data.duplicated) {
+                            result = "사용 가능한 아이디입니다.";
+                            $("#result_checkId").html(result).css("color", "green");
+                            idFlag = true;
+                        } else {
+                            result = "이미 사용중인 아이디입니다.";
+                            $("#result_checkId").html(result).css("color", "red");
                             idFlag = false;
-                            alert("오류 발생");
                         }
+                    }).catch(function (error) {
+                        idFlag = false;
+                        alert("오류 발생");
                     });
                 } else {
                     alert("아이디는 6~12자의 영문자와 숫자 조합이어야 합니다.");
@@ -85,21 +79,18 @@
 
                 if (isValidEmail(email)) {
                     // 정규 표현식을 사용하여 이메일 유효성 검사
-                    $.ajax({
-                        type: 'post',
-                        url: "/starroad/checkMemberEmail",
-                        data: {"email": email},
-                        success: function (data) {
-                            if (data == "N") {
-                                result = "사용 가능한 이메일입니다.";
-                                $("#result_checkEmail").html(result).css("color", "green");
-                                emailFlag = true;
-                            } else {
-                                result = "이미 사용중인 이메일입니다.";
-                                $("#result_checkEmail").html(result).css("color", "red");
-                                emailFlag = false;
-                            }
+                    api.get("/api/starroad/members/check-email?email=" + encodeURIComponent(email)).then(function (data) {
+                        if (!data.duplicated) {
+                            result = "사용 가능한 이메일입니다.";
+                            $("#result_checkEmail").html(result).css("color", "green");
+                            emailFlag = true;
+                        } else {
+                            result = "이미 사용중인 이메일입니다.";
+                            $("#result_checkEmail").html(result).css("color", "red");
+                            emailFlag = false;
                         }
+                    }).catch(function (error) {
+                        emailFlag = false;
                     });
                 } else {
                     emailFlag = false;
@@ -122,7 +113,20 @@
                 }
             });
 
-            $(".submit-button").click(function () {
+            // 고르지 않았으면(disabled 안내 옵션이 선택된 상태) null
+            function selectedText(select) {
+                const option = select.options[select.selectedIndex];
+                return (!option || option.disabled) ? null : option.text;
+            }
+
+            function joinValues(selector, separator) {
+                return $(selector).map(function () {
+                    return this.value;
+                }).get().join(separator);
+            }
+
+            $("#member_form").on("submit", async function (e) {
+                e.preventDefault();
                 var requiredFields = $("input[required]");
 
                 // 모든 필수 필드가 valid한지 확인
@@ -134,9 +138,28 @@
                     }
                 });
 
-                // 모든 필수 필드가 valid하다면 alert 띄우기
+                // 모든 필수 필드가 valid하다면 가입 요청
                 if (allValid && emailFlag && errorFlag && idFlag) {
-                    alert("회원가입이 완료되었습니다.");
+                    try {
+                        await api.post("/api/starroad/members", {
+                            name: $("#name").val(),
+                            id: $("#id").val(),
+                            password: $("#password").val(),
+                            birthday: $("#birthday").val(),
+                            phone: joinValues("input[name=phone]", "-"),
+                            email: $("#email").val(),
+                            address: joinValues("input[name=address]", ","),
+                            job: selectedText(document.getElementById("job")),
+                            purpose: selectedText(document.getElementById("purpose")),
+                            source: selectedText(document.getElementById("source")),
+                            salary: Number($("#salary").val()),
+                            goal: Number($("#goal").val())
+                        });
+                        alert("회원가입이 완료되었습니다.");
+                        location.href = "/starroad/login";
+                    } catch (error) {
+                        alert(error.message);
+                    }
                 } else {
                     alert("회원정보를 다시 확인해주세요");
                 }
@@ -176,7 +199,7 @@
 <div class="container">
     <div class="form-container">
         <h1>회원가입</h1>
-        <form action="/starroad/member" method="post" enctype="multipart/form-data">
+        <form id="member_form" method="post">
             <h2>기본정보 <span class="required"><span class="star">*</span>&nbsp;표시는 필수 입력입니다</span></h2>
             <table>
                 <tr>

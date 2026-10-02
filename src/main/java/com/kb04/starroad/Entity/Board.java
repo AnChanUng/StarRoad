@@ -1,7 +1,5 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.board.BoardRequestDto;
-import com.kb04.starroad.Dto.board.BoardResponseDto;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -11,9 +9,9 @@ import java.util.List;
 
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "board")
 public class Board {
 
@@ -42,6 +40,7 @@ public class Board {
     @Column(name = "comment_num", nullable = false)
     private int commentNum;
 
+    @Builder.Default
     @Column(name = "status", nullable = false)
     private Character status = 'Y';
 
@@ -55,11 +54,35 @@ public class Board {
     @Column(name = "detail_type", length = 100, nullable = false)
     private String detailType;
 
+    @Builder.Default
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Heart> hearts = new ArrayList<>();
+
+    /**
+     * 회원이 새 게시글을 쓴다. 좋아요와 댓글 수는 0, 상태는 게시('Y')로 시작한다.
+     *
+     * @param type       게시판 종류 (F: 자유게시판, C: 인증방)
+     * @param detailType 말머리
+     * @param image      첨부 이미지. 없으면 null
+     */
+    public static Board write(Member writer, String type, String detailType,
+                              String title, String content, byte[] image) {
+        return Board.builder()
+                .member(writer)
+                .type(type)
+                .detailType(detailType)
+                .title(title)
+                .content(content)
+                .image(image)
+                .likes(0)
+                .commentNum(0)
+                .status('Y')
+                .build();
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -68,40 +91,6 @@ public class Board {
         if (status == null) { // status 필드가 null인 경우 '1'로 초기화
             status = '1';
         }
-    }
-
-    /*public BoardRequestDto toBoardRequestDto() {
-        return BoardRequestDto.builder()
-                .member(member)
-                .title(title)
-                .regdate(regdate)
-                .content(content)
-                .likes(likes)
-                .commentNum(commentNum)
-                .status(status)
-                .type(type)
-                .image(image)
-                .detailType(detailType)
-                .build();
-    }*/
-
-    /**
-     * Entity를 Dto로 변경
-     */
-    public BoardResponseDto toBoardResponseDto() {
-        return BoardResponseDto.builder()
-                .no(no)
-                .title(title)
-                .regdate(regdate)
-                .content(content)
-                .likes(likes)
-                .commentNum(commentNum)
-                .type(type)
-                .image(image)
-                .detailType(detailType)
-                .imageBase64(image == null ? null : java.util.Base64.getEncoder().encodeToString(image))
-                .memberId(member == null ? null : member.getId())
-                .build();
     }
 
     /**
@@ -116,14 +105,20 @@ public class Board {
         this.image = image;
     }
 
-//    public void setMember(Member member) {
-//        this.member = member;
-//    }
-
-    public void setCommentNum(int commentNum) {
-        this.commentNum = commentNum;
+    /** 이 게시글을 쓴 회원의 아이디가 맞는지 */
+    public boolean isWrittenBy(String memberId) {
+        return member != null && member.getId().equals(memberId);
     }
-    public void setLikes(int likes){
-        this.likes = likes;
+
+    public void increaseLikes() {
+        this.likes++;
+    }
+
+    public void increaseCommentNum() {
+        this.commentNum++;
+    }
+
+    public void decreaseCommentNum() {
+        this.commentNum--;
     }
 }

@@ -12,5 +12,6 @@ import java.util.List;
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Integer>, JpaSpecificationExecutor<Subscription> {
     public List<Subscription> findByMember(Member no);
+    public List<Subscription> findByMemberNo(int memberNo);
     public Subscription findByNo(int no);
 }

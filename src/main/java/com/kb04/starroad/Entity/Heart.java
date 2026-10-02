@@ -1,5 +1,6 @@
 package com.kb04.starroad.Entity;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,9 +10,9 @@ import jakarta.persistence.*;
 
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "heart")
 public class Heart {
     @Id
@@ -27,4 +28,12 @@ public class Heart {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "board_no")
     private Board board;
+
+    /** 회원이 게시글에 누른 좋아요 */
+    public static Heart of(Member member, Board board) {
+        return Heart.builder()
+                .member(member)
+                .board(board)
+                .build();
+    }
 }

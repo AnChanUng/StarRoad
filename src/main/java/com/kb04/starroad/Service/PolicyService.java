@@ -1,23 +1,28 @@
 package com.kb04.starroad.Service;
 
 import com.kb04.starroad.Dto.MemberDto;
+import com.kb04.starroad.Dto.policy.PolicyLikeResponseDto;
+import com.kb04.starroad.Dto.policy.PolicyNoticeResponseDto;
+import com.kb04.starroad.Dto.policy.PolicyPageResponseDto;
 import com.kb04.starroad.Dto.policy.PolicyRequestDto;
 import com.kb04.starroad.Dto.policy.PolicyResponseDto;
-import com.kb04.starroad.Entity.Member;
 import com.kb04.starroad.Entity.Policy;
 import com.kb04.starroad.Entity.PolicyHeart;
+import com.kb04.starroad.Exception.ErrorCode;
+import com.kb04.starroad.Exception.StarroadException;
 import com.kb04.starroad.Repository.MemberRepository;
 import com.kb04.starroad.Repository.PolicyHeartRepository;
 import com.kb04.starroad.Repository.PolicyRepository;
 import com.kb04.starroad.Repository.Specification.PolicySpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -27,214 +32,116 @@ public class PolicyService {
     private final PolicyHeartRepository policyHeartRepository;
     private final MemberRepository memberRepository;
     private static final int ITEMS_PER_PAGE = 3;
+    /** 화면의 '금융자산' 태그는 DB 에 '금융자산 형성' 으로 들어 있다 */
+    private static final String TAG4_SUFFIX = " 형성";
 
     /**
-     * 청년정책 전체 조회
-     * @return List<PolicyResponseDto>
+     * 청년정책 조회·검색. 조건이 하나도 없으면 전체를 조회한다.
+     * @param loginMember 로그인한 회원. 있으면 관심 정책 여부를 표시한다. 비로그인이면 null
      */
-    public List<PolicyResponseDto> selectAllPolicies(){
+    public PolicyPageResponseDto searchPolicies(PolicyRequestDto request, MemberDto loginMember) {
+        Map<String, Object> searchKeys = toSearchKeys(request);
 
-        List<PolicyResponseDto> result = new ArrayList<>();
-        List<Policy> plist = policyRepository.findAll();
+        List<Policy> policies = searchKeys.isEmpty()
+                ? policyRepository.findAll()
+                : policyRepository.findAll(PolicySpecification.searchPolicyWithMultiConditions(searchKeys));
 
-        for(Policy policy : plist){
-            PolicyResponseDto dto = PolicyResponseDto.builder()
-                    .no(policy.getNo())
-                    .name(policy.getName())
-                    .explain(policy.getExplain())
-                    .location(policy.getLocation())
-                    .tag(policy.getTag())
-                    .link(policy.getLink())
-                    .isLiked("N")
-                    .build();
-            result.add(dto);
-        }
+        Set<Integer> likedPolicyNos = likedPolicyNos(loginMember);
+        List<PolicyResponseDto> result = policies.stream()
+                .map(policy -> PolicyResponseDto.of(policy, likedPolicyNos.contains(policy.getNo())))
+                .collect(Collectors.toList());
 
-        return result;
+        return returnPoliciesByPage(result, request.getPageIndex());
     }
 
     /**
      * 청년정책 Pagination
-     * @return Map<String, Object>
      */
-    public Map<String, Object> returnPoliciesByPage(List<PolicyResponseDto> policyList, int pageIdx) {
-
-        Map<String, Object> result = new HashMap<>();
-
+    private PolicyPageResponseDto returnPoliciesByPage(List<PolicyResponseDto> policyList, int pageIdx) {
         int totalCount = policyList.size();
-        int startIndex = (pageIdx - 1) * ITEMS_PER_PAGE;
+        int startIndex = Math.min(Math.max(pageIdx - 1, 0) * ITEMS_PER_PAGE, totalCount);
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalCount);
 
-        result.put("policyList", policyList.subList(startIndex, endIndex));
-        result.put("pageEndIndex", Math.ceil(totalCount / (double) ITEMS_PER_PAGE));
-
-        return result;
+        return PolicyPageResponseDto.of(policyList.subList(startIndex, endIndex),
+                (int) Math.ceil(totalCount / (double) ITEMS_PER_PAGE), pageIdx);
     }
 
     /**
-     * 청년정책 검색 조건 여부 판단
-     * @return boolean
+     * 검색 조건을 PolicySpecification 이 받는 형태로 바꾼다. 비어 있는 조건은 뺀다.
      */
-    public boolean judgePolicies(PolicyRequestDto requestDto) {
-
-        PolicyRequestDto dto = PolicyRequestDto.builder()
-                .keyword(null)
-                .location(null)
-                .tag1(null)
-                .tag2(null)
-                .tag3(null)
-                .tag4(null)
-                .build();
-
-        return dto.equals(requestDto);
-    }
-
-    /**
-     * 청년정책 검색 using 조건
-     * @return List<PolicyResponseDto>
-     */
-    public List<PolicyResponseDto> selectDetailPolicies(PolicyRequestDto request) {
-
+    private Map<String, Object> toSearchKeys(PolicyRequestDto request) {
         Map<String, Object> searchKeys = new HashMap<>();
 
-        if(request.getLocation() != null) searchKeys.put("location", request.getLocation());
-        if(request.getKeyword() != null) searchKeys.put("keyword", request.getKeyword());
+        if (StringUtils.hasText(request.getLocation())) searchKeys.put("location", request.getLocation());
+        if (StringUtils.hasText(request.getKeyword())) searchKeys.put("keyword", request.getKeyword());
 
         List<String> tags = new ArrayList<>();
-        if(request.getTag1() != null) tags.add(request.getTag1());
-        if(request.getTag2() != null) tags.add(request.getTag2());
-        if(request.getTag3() != null) tags.add(request.getTag3());
-        if(request.getTag4() != null) tags.add(request.getTag4());
+        if (StringUtils.hasText(request.getTag1())) tags.add(request.getTag1());
+        if (StringUtils.hasText(request.getTag2())) tags.add(request.getTag2());
+        if (StringUtils.hasText(request.getTag3())) tags.add(request.getTag3());
+        if (StringUtils.hasText(request.getTag4())) tags.add(request.getTag4() + TAG4_SUFFIX);
 
-        if(tags.size() != 0) searchKeys.put("tag", tags);
+        if (!tags.isEmpty()) searchKeys.put("tag", tags);
 
-        List<Policy> result = policyRepository.findAll(PolicySpecification.searchPolicyWithMultiConditions(searchKeys));
-        List<PolicyResponseDto> finalResult = new ArrayList<>();
-        for(Policy policy : result){
-            PolicyResponseDto dto = PolicyResponseDto.builder()
-                    .no(policy.getNo())
-                    .name(policy.getName())
-                    .explain(policy.getExplain())
-                    .tag(policy.getTag())
-                    .link(policy.getLink())
-                    .location(policy.getLocation())
-                    .isLiked("N")
-                    .build();
-            finalResult.add(dto);
-        }
-        return finalResult;
+        return searchKeys;
     }
 
     /**
-     * 청년정책 검색 조건 매핑
-     * @return Map<String, String>
+     * 로그인한 유저가 관심 정책으로 등록한 정책 번호. 비로그인이면 비어 있다.
      */
-    public Map<String, String> mappingRequest(PolicyRequestDto requestDto) {
-
-        Map<String, String> result = new HashMap<>();
-
-        result.put("request_location", requestDto.getLocation());
-        result.put("request_keyword", requestDto.getKeyword());
-        result.put("request_tag1", requestDto.getTag1());
-        result.put("request_tag2", requestDto.getTag2());
-        result.put("request_tag3", requestDto.getTag3());
-        result.put("request_tag4", requestDto.getTag4());
-
-        return result;
-    }
-
-    /**
-     * 로그인한 유저의 관심 정책 표시
-     * @param list 필터링한 정책 리스트
-     * @param memberDto 현재 로그인한 유저
-     */
-    public List<PolicyResponseDto> mappingPolicyHeart(List<PolicyResponseDto> list, MemberDto memberDto) {
-
-        int memberNo = memberDto.getNo();
-        List<PolicyHeart> heartList = policyHeartRepository.findAllByMemberNo(memberNo);
-
-        if(heartList.equals(null))
-            return list;
-        else{
-            for(PolicyHeart heart : heartList){
-                for (PolicyResponseDto dto : list){
-                    if(heart.getPolicy().getNo() == dto.getNo()){
-                        dto.setIsLiked("Y");
-                    }
-                }
-            }
-
-            return list;
+    private Set<Integer> likedPolicyNos(MemberDto loginMember) {
+        if (loginMember == null) {
+            return Collections.emptySet();
         }
+        return policyHeartRepository.findAllByMemberNo(loginMember.getNo()).stream()
+                .map(heart -> heart.getPolicy().getNo())
+                .collect(Collectors.toSet());
     }
 
     /**
-     * 현재 로그인한 유저가 해당 정책을 관심 정책에 추가했는지 검사
+     * 관심 정책 등록·해제. 이미 등록한 정책이면 해제하고, 아니면 등록한다.
      * @param memberDto 현재 로그인한 유저
      * @param policyNo 정책 번호
      */
-    public boolean hasLiked(MemberDto memberDto, int policyNo) {
-
+    public PolicyLikeResponseDto togglePolicyHeart(MemberDto memberDto, int policyNo) {
         PolicyHeart policyHeart = policyHeartRepository.findByMemberNoAndPolicyNo(memberDto.getNo(), policyNo);
-        return policyHeart == null;
-    }
 
-    /**
-     * 현재 로그인한 유저의 관심 정책으로 등록
-     * @param memberDto 현재 로그인한 유저
-     * @param policyNo 정책 번호
-     */
-    public void addPolicyHeart(MemberDto memberDto, int policyNo){
+        if (policyHeart != null) {  // 관심정책에서 삭제
+            policyHeartRepository.deleteById(policyHeart.getNo());
+            return PolicyLikeResponseDto.of(false);
+        }
 
+        // 관심정책으로 등록
         Policy policy = policyRepository.findByNo(policyNo);
-        Member member = memberRepository.findByNo(memberDto.getNo());
-
-        policyHeartRepository.save(PolicyHeart.builder()
-                .member(member)
-                .policy(policy)
-                .build());
+        if (policy == null) {
+            throw new StarroadException(ErrorCode.POLICY_NOT_FOUND);
+        }
+        policyHeartRepository.save(PolicyHeart.of(memberRepository.findByNo(memberDto.getNo()), policy));
+        return PolicyLikeResponseDto.of(true);
     }
 
     /**
-     * 현재 로그인한 유저의 관심 정책에서 삭제
+     * 알림창에 표시할 정책 선별 — 관심 정책 중 아직 마감되지 않았고 마감이 가장 가까운 것
      * @param memberDto 현재 로그인한 유저
-     * @param policyNo 정책 번호
      */
-    public void deletePolicyHeart(MemberDto memberDto, int policyNo){
+    public PolicyNoticeResponseDto modalPolicy(MemberDto memberDto){
 
-        PolicyHeart policyHeart = policyHeartRepository.findByMemberNoAndPolicyNo(memberDto.getNo(), policyNo);
-        policyHeartRepository.deleteById(policyHeart.getNo());
-    }
-
-    /**
-     * 알림창에 표시할 정책 선별
-     * @param memberDto 현재 로그인한 유저
-     * @return PolicyResponseDto
-     */
-    public PolicyResponseDto modalPolicy(MemberDto memberDto){
-
-        List<PolicyHeart> list = policyHeartRepository.findAllByMemberNo(memberDto.getNo());
         List<Policy> policyList = new ArrayList<>();
-        for (PolicyHeart policyHeart : list){
-            policyList.add(policyRepository.findByNo(policyHeart.getPolicy().getNo()));
+        for (PolicyHeart policyHeart : policyHeartRepository.findAllByMemberNo(memberDto.getNo())){
+            policyList.add(policyHeart.getPolicy());
         }
 
         policyList.sort(Comparator.comparing(Policy::getEndDate));
 
-        LocalDate policyDate = null;
         for (Policy policy : policyList) {
-            policyDate = policy.getEndDate().toInstant()
+            LocalDate policyDate = policy.getEndDate().toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate();
-            Long period = ChronoUnit.DAYS.between(policyDate, LocalDate.now());
+            long period = ChronoUnit.DAYS.between(policyDate, LocalDate.now());
             if(period <= 0) {
-                return PolicyResponseDto.builder()
-                        .name(policy.getName())
-                        .dDay(String.valueOf(period))
-                        .link(policy.getLink())
-                        .build();
+                return PolicyNoticeResponseDto.of(memberDto.getName(), policy, period);
             }
         }
-        return null;
+        return PolicyNoticeResponseDto.empty("관심정책을 등록하고 알림을 받아보세요🤗");
     }
 }

@@ -8,8 +8,8 @@
     <link rel="stylesheet" type="text/css" href="/resources/static/css/board/write.css">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
     <script src="//stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-    r
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
         $(function () {
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
@@ -51,15 +51,28 @@
                 }
             });
         });
+        // 글 등록: 폼 제출을 가로채 API 로 보내고, 성공하면 글을 쓴 게시판 목록으로 간다
+        $(document).ready(function () {
+            $('#writeForm').on('submit', async function (event) {
+                event.preventDefault();
+                const type = $('#type').val();
+                try {
+                    await api.post('/api/starroad/boards', new FormData(this));
+                    location.href = '/starroad/board/free?type=' + encodeURIComponent(type);
+                } catch (e) {
+                    if (e.status !== 401) alert(e.message);   // 401 은 common.js 가 이미 알리고 로그인 화면으로 보낸다
+                }
+            });
+        });
 
 
     </script>
-    <div id="navbar"></div>
 
 </head>
 <body>
+<div id="navbar"></div>
 
-<form method="post" action="/starroad/board/writepro" enctype="multipart/form-data">
+<form id="writeForm" method="post" enctype="multipart/form-data">
 
 
     <div class="container">
@@ -115,7 +128,7 @@
 
                 <div class="content">
                     <textarea name="content" class="contentStyle" id="content" placeholder="내용을 입력하세요"
-                              required>${board.content}</textarea>
+                              required></textarea>
 
 
                 </div>

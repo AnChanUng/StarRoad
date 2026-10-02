@@ -1,5 +1,6 @@
 package com.kb04.starroad.Entity;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,9 +10,9 @@ import jakarta.persistence.*;
 
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "policy_heart")
 public class PolicyHeart {
 
@@ -28,4 +29,12 @@ public class PolicyHeart {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "policy_no")
     private Policy policy;
+
+    /** 회원이 관심 정책으로 등록한 정책 */
+    public static PolicyHeart of(Member member, Policy policy) {
+        return PolicyHeart.builder()
+                .member(member)
+                .policy(policy)
+                .build();
+    }
 }

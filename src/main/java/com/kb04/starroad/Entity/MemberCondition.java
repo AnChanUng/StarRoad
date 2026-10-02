@@ -1,15 +1,14 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.product.MemberConditionDto;
 import lombok.*;
 
 import jakarta.persistence.*;
 
 @Getter
 @Entity
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "member_condition")
 public class MemberCondition {
 
@@ -27,12 +26,11 @@ public class MemberCondition {
     @JoinColumn(name = "member_no", nullable = false)
     private Member member;
 
-
-    public MemberConditionDto toMemberConditionDto() {
-        return MemberConditionDto.builder()
-                .no(no)
-                .condition(condition.toConditionDto())
-                .member(member.toMemberDto())
+    /** 회원이 충족한 우대 조건 */
+    public static MemberCondition of(Member member, Condition condition) {
+        return MemberCondition.builder()
+                .member(member)
+                .condition(condition)
                 .build();
     }
 }

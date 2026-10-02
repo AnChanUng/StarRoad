@@ -1,8 +1,4 @@
-<%@ page import="java.sql.Blob" %>
-<%@ page import="java.util.Base64" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib uri="jakarta.tags.core" prefix="c" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <html lang="ko">
 <head>
     <title>STARROAD</title>
@@ -14,13 +10,18 @@
     <link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/resources/static/css/common.css">
     <link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/resources/static/css/board/board2.css">
     <script src="//code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/resources/static/js/common.js"></script>
     <script type="text/javascript">
+        // 이 화면은 /starroad/board/free?type=F|C 와 /starroad/board/popular 두 주소에서 함께 쓴다
+        const IS_POPULAR = /\/popular\/?$/.test(location.pathname);
+        const BOARD_TYPE = IS_POPULAR ? '' : (getQueryParam('type') || 'F');
+
         $(function() {
             $("#navbar").load("${path}/resources/common_jsp/navbar.jsp");
-            if ("${type}" === 'F') {
+            if (BOARD_TYPE === 'F') {
                 $("#nav_typeF").css("color", "#543d0d").css("font-weight", 800)
                     .css("box-shadow", "inset 0 -10px 0 #FFBC00FF");
-            }else if ("${type}" === 'C') {
+            }else if (BOARD_TYPE === 'C') {
                 $("#nav_typeC").css("color", "#543D0DFF").css("font-weight", 800)
                     .css("box-shadow", "inset 0 -10px 0 #FFBC00FF");
             }
@@ -28,7 +29,57 @@
                 $("#nav_popular").css("color", "#543D0DFF").css("font-weight", 800)
                     .css("box-shadow", "inset 0 -10px 0 #FFBC00FF");
             }
+            loadBoards();
         });
+
+        async function loadBoards() {
+            try {
+                if (IS_POPULAR) {
+                    const boards = await api.get('/api/starroad/boards/popular');
+                    document.getElementById('free').style.display = 'none';
+                    renderBoards(document.getElementById('popular'), boards.slice(0, 6));   // 인기글은 6개까지만
+                } else {
+                    const boards = await api.get('/api/starroad/boards?type=' + encodeURIComponent(BOARD_TYPE));
+                    document.getElementById('popular').style.display = 'none';
+                    renderBoards(document.getElementById('free'), boards);
+                }
+            } catch (e) {
+                console.error('게시글 목록을 불러오지 못했습니다:', e.message);
+            }
+        }
+
+        function renderBoards(container, boards) {
+            let html = '';
+            boards.forEach(function (board) {
+                const image = board.imageBase64
+                    ? '<img class="img_detail1" src="data:image/jpeg;base64,' + escapeHtml(board.imageBase64) + '" alt=""/>'
+                    : '';
+                html += '<div class="item_box item grow" rel="grow" style="cursor: pointer;" onclick="location.href=\'/starroad/board/detail?no=' + Number(board.no) + '\';">'
+                    + '<div class="item_img" style="background-color: lightyellow">' + image + '</div>'
+                    + '<div class="item_tag">'
+                    + '<span class="item_tag_text">' + escapeHtml(board.detailType) + '</span>'
+                    + '</div>'
+                    + '<div class="item_title">' + escapeHtml(board.title) + '</div>'
+                    + '<div class="item_content">' + escapeHtml(board.content) + '</div>'
+                    + '<div class="item_footer">'
+                    + '<div class="item_id_date">'
+                    + '<div class="item_user_icon">'
+                    + '<i class="fas fa-user-circle"></i>'
+                    + '</div>'
+                    + '<div>'
+                    + '<span class="icon_id">' + escapeHtml(board.memberId || 'imkiki') + '</span> <br>'
+                    + '<span class="icon_text_date">' + formatDate(board.regdate) + '</span>'
+                    + '</div>'
+                    + '</div>'
+                    + '<div class="item_icon">'
+                    + '<i class="far fa-thumbs-up"></i><span class="icon_text">' + escapeHtml(board.likes) + '</span>'
+                    + ' <i class="far fa-comment"></i><span class="icon_text"> ' + escapeHtml(board.commentNum) + '</span>'
+                    + '</div>'
+                    + '</div>'
+                    + '</div>';
+            });
+            container.innerHTML = html;
+        }
     </script>
 </head>
 <body>
@@ -50,59 +101,10 @@
 </div>
 
 
-<!-- 자유게시판 -->
+<!-- 자유게시판 / 인증방 -->
 <main>
     <div class="main_box">
-        <div class="board_items menu-content">
-            <c:forEach items="${freeBoardPage}" var="board">
-                <div class="item_box item grow" rel="grow" style="cursor: pointer;" onclick="location.href='/starroad/board/detail?no=${board.no}';">
-                    <div class="item_img" style="background-color: lightyellow">
-                        <c:choose>
-                            <c:when test="${not empty board.imageBase64}">
-                                <img class="img_detail1" src="data:image/jpeg;base64,${board.imageBase64}" alt=""/>
-                            </c:when>
-                        </c:choose>
-                    </div>
-
-                    <div class="item_tag">
-                        <span class="item_tag_text">${board.detailType}</span>
-                    </div>
-
-                    <div class="item_title">
-                        ${board.title}
-                    </div>
-
-                    <div class="item_content">
-                            ${board.content}
-                    </div>
-
-                    <div class="item_footer">
-                        <div class="item_id_date">
-                            <div class="item_user_icon">
-                                <i class="fas fa-user-circle"></i>
-                            </div>
-                            <div>
-                                <span class="icon_id">
-                                    <c:choose>
-                                        <c:when test="${not empty board.memberId}">
-                                            ${board.memberId}
-                                        </c:when>
-                                        <c:otherwise>
-                                            imkiki
-                                        </c:otherwise>
-                                    </c:choose>
-                                </span> <br>
-                                <span class="icon_text_date"><fmt:formatDate value="${board.regdate}" pattern="yyyy-MM-dd" /></span>
-                            </div>
-                        </div>
-                        <div class="item_icon">
-                            <i class="far fa-thumbs-up"></i><span class="icon_text">${board.likes}</span>
-                            <i class="far fa-comment"></i><span class="icon_text"> ${board.commentNum}</span>
-                        </div>
-                    </div>
-                </div>
-            </c:forEach>
-        </div>
+        <div class="board_items menu-content" id="free"></div>
     </div>
 </main>
 
@@ -110,97 +112,10 @@
 <!-- 인기게시판 -->
 <main>
     <div class="main_box">
-        <div class="menu-content board_items" id="popular">
-            <c:forEach items="${popularBoardPage}" var="board" begin="0" end="5">
-                <div class="item_box item grow" rel="grow" style="cursor: pointer;" onclick="location.href='/starroad/board/detail?no=${board.no}';">
-                    <div class="item_img" style="background-color: lightyellow">
-                        <c:choose>
-                            <c:when test="${not empty board.imageBase64}">
-                                <img class="img_detail1" src="data:image/jpeg;base64,${board.imageBase64}" alt=""/>
-                            </c:when>
-                        </c:choose>
-                    </div>
-
-                    <div class="item_tag">
-                        <span class="item_tag_text">${board.detailType}</span>
-                    </div>
-
-                    <div class="item_title">
-                        ${board.title}
-                    </div>
-
-                    <div class="item_content">
-                            ${board.content}
-                    </div>
-
-                    <div class="item_footer">
-                        <div class="item_id_date">
-                            <div class="item_user_icon">
-                                <i class="fas fa-user-circle"></i>
-                            </div>
-                            <div>
-                                <span class="icon_id">
-                                    <c:choose>
-                                        <c:when test="${not empty board.memberId}">
-                                            ${board.memberId}
-                                        </c:when>
-                                        <c:otherwise>
-                                            imkiki
-                                        </c:otherwise>
-                                    </c:choose>
-                                </span> <br>
-                                <span class="icon_text_date"><fmt:formatDate value="${board.regdate}" pattern="yyyy-MM-dd" /></span>
-                            </div>
-                        </div>
-                        <div class="item_icon">
-                            <i class="far fa-thumbs-up"></i><span class="icon_text">${board.likes}</span>
-                            <i class="far fa-comment"></i><span class="icon_text"> ${board.commentNum}</span>
-                        </div>
-                    </div>
-                </div>
-            </c:forEach>
-        </div>
+        <div class="menu-content board_items" id="popular"></div>
 
     </div>
 </main>
 
-
-<script>
-    function showContent(menu, type) {
-        // 모든 메뉴 내용 숨기기
-        document.querySelectorAll('.menu-content').forEach(function (content) {
-            content.style.display = 'none';
-        });
-
-        // 선택한 메뉴 내용 표시
-        var menuContent = document.getElementById(menu);
-        menuContent.style.display = 'block';
-
-        // AJAX 요청 URL 정의
-        let url;
-        if (menu === 'free') {
-            url = '/starroad/board?type=' + type;
-        } else if (menu === 'authentication') {
-            url = '/starroad/board?type=' + type;
-        } else if (menu === 'popular') {
-            url = '/starroad/popular';
-        }
-
-        // AJAX 요청 시작
-        $.ajax({
-            url: url,
-            method: 'GET',
-            success: function (data) {
-                var content = $(data).find('.board').html();
-                menuContent.querySelector('.board').innerHTML = content;
-            },
-            error: function (error) {
-                console.error('Failed to load content:', error);
-            }
-        });
-    }
-
-
-</script>
 </body>
 </html>

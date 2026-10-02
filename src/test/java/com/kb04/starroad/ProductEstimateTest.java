@@ -52,7 +52,7 @@ class ProductEstimateTest {
     @Test
     void maxConditionRate_reachesTheScreenDto() {
         // 이 값이 화면용 DTO 로 넘어오지 않으면 기본 금리를 구할 수 없어 최고 금리로 계산된다
-        assertThat(youthSavings().toProductResponseDto().getMaxConditionRate()).isEqualTo(1.20);
+        assertThat(ProductResponseDto.from(youthSavings()).getMaxConditionRate()).isEqualTo(1.20);
     }
 
     @Test
@@ -125,26 +125,22 @@ class ProductEstimateTest {
     private static List<ProductResponseDto> dtos(Product... products) {
         List<ProductResponseDto> list = new ArrayList<>();
         for (Product product : products) {
-            list.add(product.toProductResponseDto());
+            ProductResponseDto dto = ProductResponseDto.from(product);
+            dto.setNo(list.size() + 1);    // 저장 전이라 번호가 없다. 우대금리를 상품 번호로 찾으므로 채워 준다
+            list.add(dto);
         }
         return list;
     }
 
     /** 최고 연 5.00% (24개월 기준), 그중 우대금리 최대 1.20%p */
     private static Product youthSavings() {
-        return Product.builder()
-                .no(1).type('S').name("KB청년희망적금").explain("청년 우대 적금").attribute("청년우대")
-                .minPeriod(12).maxPeriod(36).minPrice(10000).maxPrice(500000)
-                .maxRate(5.00).maxRatePeriod(24).maxConditionRate(1.20)
-                .link("https://example.com/youth").build();
+        return Product.of('S', "KB청년희망적금", "청년우대", "청년 우대 적금",
+                12, 36, 10000, 500000, 5.00, 24, 1.20, "https://example.com/youth");
     }
 
     /** 우대 조건도, 최고 금리 기간도 없는 상품 */
     private static Product timeDeposit() {
-        return Product.builder()
-                .no(2).type('D').name("KB Star 정기예금").explain("기본 정기예금").attribute("일반")
-                .minPeriod(6).maxPeriod(36).minPrice(1000000)
-                .maxRate(3.80)
-                .link("https://example.com/deposit").build();
+        return Product.of('D', "KB Star 정기예금", "일반", "기본 정기예금",
+                6, 36, 1000000, null, 3.80, null, null, "https://example.com/deposit");
     }
 }

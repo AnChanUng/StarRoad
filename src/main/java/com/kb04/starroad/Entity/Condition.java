@@ -1,6 +1,5 @@
 package com.kb04.starroad.Entity;
 
-import com.kb04.starroad.Dto.product.ConditionDto;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -8,9 +7,9 @@ import jakarta.persistence.*;
 
 @Getter
 @Entity
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "condition")
 public class Condition {
     @Id
@@ -29,14 +28,13 @@ public class Condition {
     @Column(name = "rate", nullable = false)
     private Double rate;
 
-    public ConditionDto toConditionDto() {
-        return ConditionDto.builder()
-                .no(no)
-                .prod(prod.toProductDto())
+    /** 상품의 우대 조건 하나. 충족하면 rate(%p) 만큼 금리가 더해진다. */
+    public static Condition of(Product prod, String conditionName, Double rate) {
+        return Condition.builder()
+                .prod(prod)
                 .conditionName(conditionName)
                 .rate(rate)
                 .build();
-
     }
 
 }

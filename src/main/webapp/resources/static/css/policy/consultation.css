@@ -1,0 +1,18 @@
+#policy-ai { max-width: 900px; margin: 40px auto; padding: 0 20px; color: #29252e; }
+#policy-ai h1 { font-size: 2rem; margin: 24px 0 12px; }
+#policy-ai .selection { background: #fff9e9; border: 2px solid #ffe7a8; border-radius: 20px; padding: 24px; display: grid; gap: 10px; }
+#policy-ai input, #policy-ai select, #policy-ai textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #b8b3bc; border-radius: 8px; font: inherit; }
+#policy-ai select { min-width: 0; }
+#policy-ai button { border: 1px solid #76638d; border-radius: 8px; background: #fff; color: #4e3868; padding: 10px 16px; cursor: pointer; font: inherit; }
+#policy-ai button:disabled { opacity: .5; cursor: default; }
+#policy-ai #ask { background: #665080; color: white; }
+#policy-ai .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#policy-ai .notice { font-size: .9rem; color: #60596a; line-height: 1.6; }
+#policy-ai #status { min-height: 1.5em; color: #674b20; }
+#policy-ai article { padding: 20px; margin-bottom: 16px; border: 1px solid #e0dbe7; border-radius: 16px; overflow-wrap: anywhere; }
+#policy-ai article.user { background: #f5f1fa; }
+#policy-ai article p { white-space: pre-wrap; line-height: 1.7; }
+#policy-ai article a { display: block; margin-top: 8px; }
+#policy-ai a { color: #634380; }
+#policy-ai label { font-weight: 600; }
+#policy-ai :focus-visible { outline: 3px solid #8967ac; outline-offset: 3px; }

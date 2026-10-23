@@ -225,3 +225,8 @@ ONNX(multilingual-e5-small)를 쓰므로 외부 API를 타지 않습니다.** �
 **커뮤니티**
 
 ![part4](https://github.com/KB-StarRoad/.github/assets/98302932/127c1d04-cb73-4928-93c0-e3b78a15cb81)
+
+
+## 청년 정책 RAG 연동
+
+정책별 상담과 신청 체크리스트 연결 설정은 [연동 가이드](docs/POLICY_AI.md)를 참고하세요.

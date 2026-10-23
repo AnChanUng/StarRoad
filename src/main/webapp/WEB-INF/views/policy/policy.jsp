@@ -31,6 +31,7 @@
 <div id="policy-div-wrap">
     <div id="navbar"></div>
     <div class="title">청년 금융 정책</div>
+    <p style="text-align:center;margin:20px"><a href="${pageContext.request.contextPath}/starroad/policy/ai">공식 정책 AI 상담 · 신청 체크리스트 →</a></p>
     <main>
         <div id="main_box">
             <div class="search_box bg-light">

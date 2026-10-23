@@ -66,3 +66,8 @@ rag-index*.json
 .embedding-model/
 # 로컬 실행 로그
 app.log
+
+# Local server credentials
+.env
+.env.*
+!.env.example

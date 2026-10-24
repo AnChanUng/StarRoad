@@ -95,4 +95,50 @@ class PolicyAiIntegrationTest {
         assertEquals(HttpStatus.GATEWAY_TIMEOUT, assertThrows(ResponseStatusException.class, client::policies).getStatusCode());
         upstream.verify();
     }
+
+    @Test void submitsJobWithServerOwnedSessionAndReturns202() throws Exception {
+        String body = "{\"request_id\":\"request-00000001\",\"request\":" + request + "}";
+        upstream.expect(requestTo("http://policy-ai:8001/chat/jobs"))
+            .andExpect(header("X-Policy-Owner", session.getAttribute("policyAiOwner").toString()))
+            .andExpect(content().json(body))
+            .andRespond(withStatus(HttpStatus.ACCEPTED).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"job_id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"state\":\"queued\",\"queue_position\":1}"));
+        mvc.perform(post("/starroad/policy/ai/jobs").session(session)
+            .header("X-Policy-CSRF", session.getAttribute("policyAiCsrf"))
+            .header("X-Policy-Owner", "attacker-controlled-owner")
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isAccepted()).andExpect(jsonPath("$.state").value("queued"));
+        upstream.verify();
+    }
+
+    @Test void statusUsesCurrentSessionOwnerAndCannotBeCached() throws Exception {
+        String id = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        upstream.expect(requestTo("http://policy-ai:8001/chat/jobs/" + id))
+            .andExpect(header("X-Policy-Owner", session.getAttribute("policyAiOwner").toString()))
+            .andRespond(withSuccess("{\"job_id\":\"" + id + "\",\"state\":\"running\"}", MediaType.APPLICATION_JSON));
+        mvc.perform(get("/starroad/policy/ai/jobs/" + id).session(session))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("running"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", "no-store"));
+        upstream.verify();
+    }
+
+    @Test void rejectsMissingSessionAndMalformedJobId() throws Exception {
+        mvc.perform(get("/starroad/policy/ai/jobs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/starroad/policy/ai/jobs/invalid").session(session))
+            .andExpect(status().isBadRequest());
+        upstream.verify();
+    }
+
+    @Test void propagatesQueueFullAndConflictingRequestIds() throws Exception {
+        String body = "{\"request_id\":\"request-00000001\",\"request\":" + request + "}";
+        upstream.expect(requestTo("http://policy-ai:8001/chat/jobs")).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        upstream.expect(requestTo("http://policy-ai:8001/chat/jobs")).andRespond(withStatus(HttpStatus.CONFLICT));
+        for (int code : new int[]{429, 409}) {
+            mvc.perform(post("/starroad/policy/ai/jobs").session(session)
+                .header("X-Policy-CSRF", session.getAttribute("policyAiCsrf"))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().is(code));
+        }
+        upstream.verify();
+    }
 }

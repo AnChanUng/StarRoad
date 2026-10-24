@@ -4,8 +4,8 @@
 
 | 검증 | 결과 |
 | --- | --- |
-| JDK 21 `mvnw clean verify` | 85개 중 84개 성공, 실패/오류 0, 실제 LLM 평가 1개 기본 제외, WAR 빌드 성공 |
-| Python 3.12 전체 unittest | 46개 성공, 실패/오류 0 |
+| JDK 21 `mvnw clean verify` | 89개 중 88개 성공, 실패/오류 0, 실제 LLM 평가 1개 기본 제외, WAR 빌드 성공 |
+| Python 3.12 전체 unittest | 56개 성공, 실패/오류 0 |
 | Playwright UI 계약 테스트 | 정책별 기록, 체크리스트, 후속 질문, 위험 HTML/URL, 실패 복구, 삭제, 모바일 가로 넘침 통과 |
 | 실제 HTTP 연결 | Edge → 실행 중인 Spring WAR → Bearer 인증 FastAPI → 실제 정책 로더 통과 |
 | 실제 HTTP 예외 처리 | CSRF 누락 403, 없는 정책 404, AI 서비스 실패 503, Python 무인증 401 통과 |
@@ -52,3 +52,10 @@ python -m unittest discover -s youth_policy/tests -v
    기존 임베딩 모델 초기화/색인이 끝날 때까지 기다립니다.
 3. Node와 Playwright 및 Edge가 있는 환경에서 `node docs/policy-ai-e2e.cjs` 실행.
 4. 검증 후 두 테스트 서버를 종료합니다. fixture 서버는 테스트 전용이며 운영에 사용하지 않습니다.
+
+
+## 동시성 변경 후 추가 검증
+
+작업 대기열, 정책별 실행 배제, 중복 제출, 결과 소유권, 한도/만료, 공유 캐시 초기화 검증을 추가했습니다.
+상세 조건은 [POLICY_CONCURRENCY](POLICY_CONCURRENCY.md)를 참고하세요.
+브라우저의 접수 응답 유실 후 재시도와 실제 HTTP의 동일 요청 8회 병렬 제출/작업 ID 일치도 검증합니다.

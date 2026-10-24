@@ -31,10 +31,11 @@
         <div class="actions">
             <button id="ask" type="submit" disabled>질문하기</button>
             <button id="checklist" type="button" disabled>신청 체크리스트</button>
+            <button id="resume" type="button" hidden>진행 상황 다시 확인</button>
             <button id="clear" type="button" disabled>현재 대화 지우기</button>
         </div>
     </form>
-    <p class="notice">대화는 이 화면을 닫거나 새로고침하면 사라집니다. AI 답변은 최종 자격 판정을 대신하지 않습니다.</p>
+    <p class="notice">대화와 진행 조회 정보는 화면을 닫거나 새로고침하면 사라집니다. 접수된 작업은 계속 처리되며 서버 재시작 시 소실됩니다. AI 답변은 최종 자격 판정을 대신하지 않습니다.</p>
 </main>
 <script src="${pageContext.request.contextPath}/resources/static/js/policy-consultation.js" defer></script>
 </body>

@@ -22,7 +22,7 @@ const assert = require('node:assert/strict');
     await page.selectOption('#policy-select', ids[0]);
     assert.equal(await page.locator('#messages article').count(), 2);
     await page.fill('#question', 'TEST_SERVICE_FAILURE'); await page.click('#ask');
-    await page.waitForFunction(() => document.querySelector('#status').textContent.includes('이용할 수 없습니다'));
+    await page.waitForFunction(() => document.querySelector('#status').textContent.includes('상담을 완료하지 못했습니다'));
     assert.equal(await page.inputValue('#question'), 'TEST_SERVICE_FAILURE');
     const csrf = await page.locator('meta[name="policy-csrf"]').getAttribute('content');
     const payload = {policy_id:ids[0],question:'질문',mode:'chat',history:[]};
@@ -33,7 +33,21 @@ const assert = require('node:assert/strict');
     assert.equal(missing.status(),404);
     const anonymous = await page.request.get('http://127.0.0.1:18001/policies');
     assert.equal(anonymous.status(),401);
+    const body = {request_id: 'dedup-000000000000001', request: payload};
+    const attempts = await Promise.all(Array.from({length:8}, () => page.request.post('http://127.0.0.1:18080/starroad/policy/ai/jobs', {
+      data:body, headers:{'X-Policy-CSRF':csrf}})));
+    assert.ok(attempts.every(r => r.status() === 202));
+    const submitted = await Promise.all(attempts.map(r=>r.json()));
+    assert.equal(new Set(submitted.map(j=>j.job_id)).size, 1);
+    const other = await browser.newContext();
+    await other.request.get('http://127.0.0.1:18080/starroad/policy/ai');
+    const foreign = await other.request.get('http://127.0.0.1:18080/starroad/policy/ai/jobs/' + submitted[0].job_id);
+    assert.equal(foreign.status(),404);
+    await other.close();
+    const changed = await page.request.post('http://127.0.0.1:18080/starroad/policy/ai/jobs', {
+      data:{...body,request:{...payload,question:'changed'}},headers:{'X-Policy-CSRF':csrf}});
+    assert.equal(changed.status(),409);
     assert.deepEqual(errors,[]);
-    console.log('PASS real HTTP: JSP -> Spring -> authenticated FastAPI -> catalog/model fixture; chat/checklist/sources/isolation/503/404/CSRF/401');
+    console.log('PASS real HTTP: JSP -> Spring -> authenticated FastAPI -> catalog/model fixture; chat/checklist/sources/isolation/failed-state/404/CSRF/401/parallel-idempotency/foreign-owner/409');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

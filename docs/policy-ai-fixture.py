@@ -1,6 +1,7 @@
 """Local integration fixture: real FastAPI/catalog, deterministic model substitute."""
 import sys
 import os
+import time
 from pathlib import Path
 repo = Path(os.environ.get('POLICY_AI_REPO', str(Path(__file__).resolve().parents[2] / 'RAG_Youth-Policy')))
 sys.path.insert(0, str(repo))
@@ -14,6 +15,7 @@ engine = PolicyService(load_settings())
 
 
 def ask(policy_id, question, history, mode):
+    time.sleep(0.2)
     if question == 'TEST_SERVICE_FAILURE':
         raise RuntimeError('internal fixture failure')
     policy = engine.by_id[policy_id]

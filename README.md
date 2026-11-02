@@ -115,3 +115,7 @@ Postman 컬렉션(`docs/postman/`)으로 정상 요청과 차단할 요청을 �
 mvnw test                                                                    # LLM 없이 도는 테스트 전부
 mvnw test -Dtest=RagAnswerEvalTest -Deval.llm=true -Deval.profiles=dev,ollama # 답변 평가
 ```
+
+## RAG 벡터 저장소 선택
+
+기본 인메모리(SimpleVectorStore)와 Chroma DB를 설정으로 선택할 수 있습니다. [실행 방법·설정·검증 안내](docs/VECTOR_STORES.md)를 참고하세요.

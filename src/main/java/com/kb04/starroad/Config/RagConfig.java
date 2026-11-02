@@ -4,28 +4,13 @@ import com.kb04.starroad.Ai.GuardrailAdvisor;
 import com.kb04.starroad.Ai.RagRetrievalAdvisor;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatProperties;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RagConfig {
-
-    /**
-     * 인메모리 벡터 저장소.
-     *
-     * <p>정책·상품은 수백 건 규모라 인메모리로 충분하다. 다만 Spring AI 문서상
-     * SimpleVectorStore 는 데모·테스트 용도로 명시돼 있다 — 데이터가 수만 건으로
-     * 늘거나 다중 인스턴스로 배포하게 되면 pgvector·Redis 등으로 교체해야 한다.
-     * VectorStore 인터페이스를 그대로 쓰므로 교체 시 이 빈 정의만 바뀐다.
-     */
-    @Bean
-    public SimpleVectorStore vectorStore(EmbeddingModel embeddingModel) {
-        return SimpleVectorStore.builder(embeddingModel).build();
-    }
 
     /**
      * 챗봇용 ChatClient. 모든 호출이 아래 Advisor 체인을 거친다.

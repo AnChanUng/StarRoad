@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -24,8 +26,8 @@ import java.util.Map;
  * DB 의 정책·상품 데이터를 벡터 색인으로 만드는 서비스.
  *
  * <p>RAG 의 'R'(검색)이 성립하려면 먼저 각 row 를 임베딩해 두어야 한다.
- * 색인은 애플리케이션 기동 시 1회 수행하고 파일로 저장해, 재기동 때는
- * 다시 임베딩하지 않고 불러온다.
+ * 인메모리 모드는 파일로 저장·복원한다. 외부 저장소 모드는 기동 시 원본 DB로
+ * 다시 색인해 수정·삭제된 데이터도 반영한다.
  */
 @Slf4j
 @Service
@@ -47,7 +49,7 @@ public class RagIndexService {
     public static final String TYPE_POLICY = "policy";
     public static final String TYPE_PRODUCT = "product";
 
-    private final SimpleVectorStore vectorStore;
+    private final VectorStore vectorStore;
     private final PolicyRepository policyRepository;
     private final ProductRepository productRepository;
 
@@ -65,8 +67,8 @@ public class RagIndexService {
     public void initIndex() {
         File indexFile = new File(indexFilePath);
         try {
-            if (indexFile.exists() && !alwaysReindex) {
-                vectorStore.load(indexFile);
+            if (vectorStore instanceof SimpleVectorStore memory && indexFile.exists() && !alwaysReindex) {
+                memory.load(indexFile);
                 log.info("[RAG] 기존 색인을 불러왔다: {}", indexFile.getAbsolutePath());
             } else {
                 reindex();
@@ -83,7 +85,7 @@ public class RagIndexService {
      *
      * @return 색인된 문서 수
      */
-    public int reindex() {
+    public synchronized int reindex() {
         List<Document> documents = new ArrayList<>();
 
         for (Policy policy : policyRepository.findAll()) {
@@ -93,16 +95,19 @@ public class RagIndexService {
             documents.add(toDocument(product));
         }
 
-        if (documents.isEmpty()) {
-            log.warn("[RAG] 색인할 정책·상품 데이터가 DB 에 없다.");
-            return 0;
+        // Remove only this application's managed records, including deleted policies/products.
+        // Both stores implement the same metadata filter; unrelated records are preserved.
+        var filter = new FilterExpressionBuilder();
+        vectorStore.delete(filter.or(filter.eq(META_TYPE, TYPE_POLICY), filter.eq(META_TYPE, TYPE_PRODUCT)).build());
+        if (!documents.isEmpty()) vectorStore.add(documents);
+
+        if (vectorStore instanceof SimpleVectorStore memory) {
+            File indexFile = new File(indexFilePath);
+            memory.save(indexFile);
+            log.info("[RAG] 문서 {}건 색인 완료 → {}", documents.size(), indexFile.getAbsolutePath());
+        } else {
+            log.info("[RAG] 외부 벡터 저장소에 문서 {}건 색인 완료", documents.size());
         }
-
-        vectorStore.add(documents);
-
-        File indexFile = new File(indexFilePath);
-        vectorStore.save(indexFile);
-        log.info("[RAG] 문서 {}건 색인 완료 → {}", documents.size(), indexFile.getAbsolutePath());
 
         return documents.size();
     }

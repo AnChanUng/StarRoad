@@ -34,6 +34,11 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Explicit beans select memory or Chroma; no Chroma auto-configuration in memory mode. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-chroma-store</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
